@@ -1,7 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { loginAdmin, clearError } from '../../store/slices/authSlice';
+import { showErrorNotification, showSuccessNotification } from '../../store/slices/uiSlice';
 import styles from './login.module.css';
 
 export default function Login() {
@@ -9,8 +13,20 @@ export default function Login() {
     email: '',
     password: ''
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  
+  const dispatch = useAppDispatch();
+  const router = useRouter();
+  const { loading, error, isAuthenticated } = useAppSelector((state) => state.auth);
+
+  useEffect(() => {
+    // Clear any previous errors when component mounts
+    dispatch(clearError());
+    
+    // Redirect if already authenticated
+    if (isAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [dispatch, isAuthenticated, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -22,23 +38,22 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-
+    
     try {
-      // TODO: Implement actual login logic here
-      console.log('Login attempt:', formData);
+      const result = await dispatch(loginAdmin(formData)).unwrap();
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      dispatch(showSuccessNotification({
+        title: 'Login Successful',
+        message: `Welcome back, ${result.user.name}!`
+      }));
       
-      // For demo purposes
-      alert('Login successful!');
-      
-    } catch {
-      setError('Login failed. Please check your credentials.');
-    } finally {
-      setLoading(false);
+      // Redirect to dashboard
+      router.push('/dashboard');
+    } catch (err) {
+      dispatch(showErrorNotification({
+        title: 'Login Failed',
+        message: err as string || 'An error occurred during login'
+      }));
     }
   };
 
