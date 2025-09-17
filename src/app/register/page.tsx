@@ -12,10 +12,14 @@ export default function Register() {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'organizer' as 'admin' | 'organizer'
+    phone: '',
+    address: '',
+    role: 'organizer' as 'super_admin' | 'organizer'
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [passwordsMatch, setPasswordsMatch] = useState(true);
 
   const { register, user } = useAuth();
   const router = useRouter();
@@ -27,14 +31,23 @@ export default function Register() {
     }
   }, [user, router]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
-    // Clear error when user types
+
+    // Check password match
+    if (name === 'confirmPassword' || name === 'password') {
+      const password = name === 'password' ? value : formData.password;
+      const confirmPassword = name === 'confirmPassword' ? value : formData.confirmPassword;
+      setPasswordsMatch(password === confirmPassword);
+    }
+
+    // Clear error and success when user types
     if (error) setError('');
+    if (success) setSuccess('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,10 +69,16 @@ export default function Register() {
     }
 
     try {
-      const success = await register(formData.email, formData.password, formData.name, formData.role);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { confirmPassword, ...registerData } = formData;
+      const success = await register(registerData);
       
       if (success) {
-        router.push('/dashboard');
+        setSuccess('Registration successful! Please login with your credentials.');
+        // Redirect to login after showing success message
+        setTimeout(() => {
+          router.push('/login');
+        }, 2000);
       } else {
         setError('Registration failed. Please try again.');
       }
@@ -73,12 +92,24 @@ export default function Register() {
   return (
     <div className={styles.container}>
       <div className={styles.registerCard}>
-        <h1 className={styles.title}>Admin Registration</h1>
-        <p className={styles.subtitle}>Create your admin account</p>
+        <h1 className={styles.title}>Organizer Registration</h1>
+        <p className={styles.subtitle}>Create your organizer account</p>
         
         {error && (
           <div className={styles.error}>
             {error}
+          </div>
+        )}
+
+        {success && (
+          <div className={styles.success}>
+            {success}
+          </div>
+        )}
+
+        {!passwordsMatch && formData.confirmPassword && (
+          <div className={styles.error}>
+            Passwords do not match
           </div>
         )}
 
@@ -148,6 +179,38 @@ export default function Register() {
           </div>
 
           <div className={styles.inputGroup}>
+            <label htmlFor="phone" className={styles.label}>
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              id="phone"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              className={styles.input}
+              placeholder="Enter your phone number"
+              required
+            />
+          </div>
+
+          <div className={styles.inputGroup}>
+            <label htmlFor="address" className={styles.label}>
+              Address
+            </label>
+            <textarea
+              id="address"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              className={styles.input}
+              placeholder="Enter your complete address"
+              rows={3}
+              required
+            />
+          </div>
+
+          <div className={styles.inputGroup}>
             <label htmlFor="role" className={styles.label}>
               Role
             </label>
@@ -160,7 +223,7 @@ export default function Register() {
               required
             >
               <option value="organizer">Organizer</option>
-              <option value="admin">Admin</option>
+              <option value="super_admin">Super Admin</option>
             </select>
           </div>
 

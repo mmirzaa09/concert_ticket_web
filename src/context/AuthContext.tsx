@@ -13,7 +13,15 @@ interface AuthContextType {
   user: User | null
   token: string | null
   login: (email: string, password: string) => Promise<boolean>
-  register: (email: string, password: string, name: string, role: 'admin' | 'organizer') => Promise<boolean>
+  register: (registerData: {
+    name: string;
+    email: string;
+    password: string;
+    phone: string;
+    address: string;
+    description?: string;
+    website?: string;
+  }) => Promise<boolean>
   logout: () => void
   isLoading: boolean
 }
@@ -58,59 +66,76 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // Mock API call - replace with actual API integration
-      const mockUsers = [
-        { id: '1', email: 'admin@test.com', password: 'admin123', name: 'Admin User', role: 'admin' as const },
-        { id: '2', email: 'organizer@test.com', password: 'org123', name: 'Organizer User', role: 'organizer' as const }
-      ]
+      // Connect to organizer login endpoint
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/organizer/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-      const foundUser = mockUsers.find(u => u.email === email && u.password === password)
-      
-      if (foundUser) {
-        const mockToken = `mock-token-${foundUser.id}-${Date.now()}`
-        const userData: User = {
-          id: foundUser.id,
-          email: foundUser.email,
-          name: foundUser.name,
-          role: foundUser.role
-        }
-
-        setToken(mockToken)
-        setUser(userData)
-        localStorage.setItem('token', mockToken)
-        localStorage.setItem('user', JSON.stringify(userData))
-        
-        return true
+      if (!response.ok) {
+        console.error('Login failed:', response.statusText);
+        return false;
       }
+
+      const data = await response.json();
       
-      return false
+      // Transform organizer data to match auth interface
+      const userData: User = {
+        id: data.organizer?.id || data.organizer?.id_organizer,
+        email: data.organizer?.email,
+        name: data.organizer?.name,
+        role: 'organizer',
+      };
+
+      setToken(data.token);
+      setUser(userData);
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      return true;
     } catch (error) {
-      console.error('Login error:', error)
-      return false
+      console.error('Login error:', error);
+      return false;
     }
   }
 
-  const register = async (email: string, password: string, name: string, role: 'admin' | 'organizer'): Promise<boolean> => {
+  const register = async (registerData: {
+    name: string;
+    email: string;
+    password: string;
+    phone: string;
+    address: string;
+    description?: string;
+    website?: string;
+  }): Promise<boolean> => {
     try {
-      // Mock API call - replace with actual API integration
-      const newUser: User = {
-        id: Date.now().toString(),
-        email,
-        name,
-        role
+      const backendData = {
+        ...registerData,
+        phone_number: registerData.phone,
+      };
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/organizer/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(backendData),
+      });
+
+      if (!response.ok) {
+        console.error('Registration failed:', response.statusText);
+        return false;
       }
 
-      const mockToken = `mock-token-${newUser.id}-${Date.now()}`
-      
-      setToken(mockToken)
-      setUser(newUser)
-      localStorage.setItem('token', mockToken)
-      localStorage.setItem('user', JSON.stringify(newUser))
-      
-      return true
+      // Registration successful, but don't auto-login
+      // User must login separately after registration
+      return true;
     } catch (error) {
-      console.error('Registration error:', error)
-      return false
+      console.error('Registration error:', error);
+      return false;
     }
   }
 

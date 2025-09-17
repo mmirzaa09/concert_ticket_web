@@ -41,6 +41,16 @@
   font-size: 0.9rem;
 }
 
+.success {
+  background: #efe;
+  color: #363;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  border: 1px solid #cfc;
+  font-size: 0.9rem;
+}
+
 .form {
   display: flex;
   flex-direction: column;

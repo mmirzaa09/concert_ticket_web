@@ -22,16 +22,13 @@ export const loginAdmin = createAsyncThunk(
   async (credentials: { email: string; password: string }, { rejectWithValue }) => {
     console.log('Attempting login with credentials:', credentials);
     try {
-      // Replace with your actual API endpoint
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/organizer/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(credentials),
       });
-
-      console.log('Login response status:', response);
 
       if (!response.ok) {
         const error = await response.json();
@@ -40,12 +37,77 @@ export const loginAdmin = createAsyncThunk(
 
       const data = await response.json();
       
-      // Store token in localStorage
-      localStorage.setItem('adminToken', data.token);
+      // Transform organizer data to match auth interface
+      const transformedData = {
+        user: {
+          id: data.organizer?.id || data.organizer?.id_organizer,
+          email: data.organizer?.email,
+          name: data.organizer?.name,
+          role: 'organizer' as const,
+          ...data.organizer,
+        },
+        token: data.token,
+      };
       
-      return data;
+      // Store token in localStorage
+      localStorage.setItem('adminToken', transformedData.token);
+      
+      return transformedData;
     } catch(error) {
       console.log('Login error:', error);
+      return rejectWithValue('Network error occurred');
+    }
+  }
+);
+
+export const registerAdmin = createAsyncThunk(
+  'auth/registerAdmin',
+  async (registerData: {
+    name: string;
+    email: string;
+    password: string;
+    phone: string;
+    address: string;
+    description?: string;
+    website?: string;
+  }, { rejectWithValue }) => {
+    try {
+      // Connect to organizer register endpoint
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/organizer/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(registerData),
+      });
+
+      console.log('Register response status:', response);
+
+      if (!response.ok) {
+        const error = await response.json();
+        return rejectWithValue(error.message || 'Registration failed');
+      }
+
+      const data = await response.json();
+      
+      // Transform organizer data to match auth interface
+      const transformedData = {
+        user: {
+          id: data.organizer?.id || data.organizer?.id_organizer,
+          email: data.organizer?.email,
+          name: data.organizer?.name,
+          role: 'organizer' as const,
+          ...data.organizer,
+        },
+        token: data.token,
+      };
+      
+      // Store token in localStorage
+      localStorage.setItem('adminToken', transformedData.token);
+      
+      return transformedData;
+    } catch(error) {
+      console.log('Registration error:', error);
       return rejectWithValue('Network error occurred');
     }
   }
@@ -149,6 +211,25 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
       });
 
+    // Register
+    builder
+      .addCase(registerAdmin.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(registerAdmin.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        state.isAuthenticated = true;
+        state.error = null;
+      })
+      .addCase(registerAdmin.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+        state.isAuthenticated = false;
+      });
+
     // Logout
     builder
       .addCase(logoutAdmin.fulfilled, (state) => {
@@ -179,4 +260,8 @@ const authSlice = createSlice({
 });
 
 export const { clearError, setUser, clearAuth } = authSlice.actions;
+
+// Export async thunks
+export { loginAdmin, registerAdmin, logoutAdmin, verifyToken };
+
 export default authSlice.reducer;
