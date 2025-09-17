@@ -1,163 +1,133 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { fetchConcerts } from '../../store/slices/concertSlice';
-import { fetchOrganizers } from '../../store/slices/organizerSlice';
-import { logoutAdmin } from '../../store/slices/authSlice';
-import { showSuccessNotification } from '../../store/slices/uiSlice';
+import Link from 'next/link';
+import ProtectedRoute from '../../components/ProtectedRoute';
+import { useAuth } from '../../context/AuthContext';
+import styles from './dashboard.module.css';
 
 export default function Dashboard() {
-  const dispatch = useAppDispatch();
-  const router = useRouter();
-  
-  const { user, isAuthenticated } = useAppSelector((state) => state.auth);
-  const { concerts, loading: concertsLoading } = useAppSelector((state) => state.concerts);
-  const { organizers, loading: organizersLoading } = useAppSelector((state) => state.organizers);
+  const { user } = useAuth();
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-      return;
-    }
+  const isAdmin = user?.role === 'admin';
 
-    // Fetch initial data
-    dispatch(fetchConcerts({ page: 1, limit: 5 }));
-    dispatch(fetchOrganizers({ page: 1, limit: 5 }));
-  }, [isAuthenticated, dispatch, router]);
-
-  const handleLogout = async () => {
-    try {
-      await dispatch(logoutAdmin()).unwrap();
-      dispatch(showSuccessNotification({
-        title: 'Logged Out',
-        message: 'You have been successfully logged out.'
-      }));
-      router.push('/login');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+  // Mock stats data
+  const stats = {
+    totalConcerts: 15,
+    activeConcerts: 8,
+    totalUsers: 45,
+    totalRevenue: 15750000,
+    pendingPayments: 3
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <p>Redirecting to login...</p>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ padding: '2rem' }}>
-      <header style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
+    <ProtectedRoute allowedRoles={['admin', 'organizer']}>
+      <div className={styles.container}>
+        <div className={styles.header}>
           <h1>Dashboard</h1>
           <p>Welcome back, {user?.name}!</p>
         </div>
-        <button 
-          onClick={handleLogout}
-          style={{ 
-            padding: '0.5rem 1rem', 
-            backgroundColor: '#dc3545', 
-            color: 'white', 
-            border: 'none', 
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Logout
-        </button>
-      </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-        {/* Concerts Section */}
-        <div style={{ 
-          padding: '1.5rem', 
-          border: '1px solid #ddd', 
-          borderRadius: '8px',
-          backgroundColor: 'white'
-        }}>
-          <h2>Recent Concerts</h2>
-          {concertsLoading ? (
-            <p>Loading concerts...</p>
-          ) : (
-            <div>
-              <p>Total Concerts: {concerts.length}</p>
-              {concerts.slice(0, 3).map((concert) => (
-                <div key={concert.id} style={{ 
-                  padding: '0.5rem', 
-                  marginBottom: '0.5rem', 
-                  backgroundColor: '#f8f9fa',
-                  borderRadius: '4px'
-                }}>
-                  <h4>{concert.name}</h4>
-                  <p>Date: {new Date(concert.date).toLocaleDateString()}</p>
-                  <p>Status: {concert.status}</p>
-                </div>
-              ))}
-            </div>
+        <div className={styles.statsGrid}>
+          <div className={styles.statCard}>
+            <h3>Total Concerts</h3>
+            <p className={styles.statNumber}>{stats.totalConcerts}</p>
+            <Link href="/concerts" className={styles.statLink}>
+              View all concerts →
+            </Link>
+          </div>
+
+          <div className={styles.statCard}>
+            <h3>Active Concerts</h3>
+            <p className={styles.statNumber}>{stats.activeConcerts}</p>
+            <Link href="/concerts" className={styles.statLink}>
+              Manage concerts →
+            </Link>
+          </div>
+
+          {isAdmin && (
+            <>
+              <div className={styles.statCard}>
+                <h3>Total Users</h3>
+                <p className={styles.statNumber}>{stats.totalUsers}</p>
+                <Link href="/users" className={styles.statLink}>
+                  Manage users →
+                </Link>
+              </div>
+
+              <div className={styles.statCard}>
+                <h3>Total Revenue</h3>
+                <p className={styles.statNumber}>Rp {stats.totalRevenue.toLocaleString()}</p>
+                <Link href="/payments" className={styles.statLink}>
+                  View payments →
+                </Link>
+              </div>
+
+              <div className={styles.statCard}>
+                <h3>Pending Payments</h3>
+                <p className={styles.statNumber}>{stats.pendingPayments}</p>
+                <Link href="/payments" className={styles.statLink}>
+                  Review payments →
+                </Link>
+              </div>
+            </>
           )}
         </div>
 
-        {/* Organizers Section */}
-        <div style={{ 
-          padding: '1.5rem', 
-          border: '1px solid #ddd', 
-          borderRadius: '8px',
-          backgroundColor: 'white'
-        }}>
-          <h2>Organizers</h2>
-          {organizersLoading ? (
-            <p>Loading organizers...</p>
-          ) : (
-            <div>
-              <p>Total Organizers: {organizers.length}</p>
-              {organizers.slice(0, 3).map((organizer) => (
-                <div key={organizer.id} style={{ 
-                  padding: '0.5rem', 
-                  marginBottom: '0.5rem', 
-                  backgroundColor: '#f8f9fa',
-                  borderRadius: '4px'
-                }}>
-                  <h4>{organizer.name}</h4>
-                  <p>Email: {organizer.email}</p>
-                  <p>Status: {organizer.status}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+        <div className={styles.quickActions}>
+          <h2>Quick Actions</h2>
+          <div className={styles.actionGrid}>
+            <Link href="/concerts" className={styles.actionCard}>
+              <h3>🎵 Manage Concerts</h3>
+              <p>Add, edit, or manage your concert listings</p>
+            </Link>
 
-      {/* Quick Stats */}
-      <div style={{ 
-        marginTop: '2rem', 
-        padding: '1.5rem', 
-        border: '1px solid #ddd', 
-        borderRadius: '8px',
-        backgroundColor: '#f8f9fa'
-      }}>
-        <h3>Quick Stats</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-          <div style={{ textAlign: 'center', padding: '1rem' }}>
-            <h4>Total Concerts</h4>
-            <p style={{ fontSize: '2rem', color: '#007bff' }}>{concerts.length}</p>
+            {isAdmin && (
+              <>
+                <Link href="/users" className={styles.actionCard}>
+                  <h3>👥 Manage Users</h3>
+                  <p>View and manage user accounts</p>
+                </Link>
+
+                <Link href="/payments" className={styles.actionCard}>
+                  <h3>💳 View Payments</h3>
+                  <p>Monitor payment transactions and revenue</p>
+                </Link>
+              </>
+            )}
           </div>
-          <div style={{ textAlign: 'center', padding: '1rem' }}>
-            <h4>Active Organizers</h4>
-            <p style={{ fontSize: '2rem', color: '#28a745' }}>
-              {organizers.filter(o => o.status === 'active').length}
-            </p>
-          </div>
-          <div style={{ textAlign: 'center', padding: '1rem' }}>
-            <h4>Pending Approvals</h4>
-            <p style={{ fontSize: '2rem', color: '#ffc107' }}>
-              {organizers.filter(o => o.status === 'pending').length}
-            </p>
+        </div>
+
+        <div className={styles.recentActivity}>
+          <h2>Recent Activity</h2>
+          <div className={styles.activityList}>
+            <div className={styles.activityItem}>
+              <span className={styles.activityIcon}>🎵</span>
+              <div>
+                <p className={styles.activityTitle}>New concert &quot;Rock Festival 2024&quot; added</p>
+                <p className={styles.activityTime}>2 hours ago</p>
+              </div>
+            </div>
+
+            <div className={styles.activityItem}>
+              <span className={styles.activityIcon}>💳</span>
+              <div>
+                <p className={styles.activityTitle}>Payment received for Jazz Night</p>
+                <p className={styles.activityTime}>5 hours ago</p>
+              </div>
+            </div>
+
+            {isAdmin && (
+              <div className={styles.activityItem}>
+                <span className={styles.activityIcon}>👤</span>
+                <div>
+                  <p className={styles.activityTitle}>New organizer account created</p>
+                  <p className={styles.activityTime}>1 day ago</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }

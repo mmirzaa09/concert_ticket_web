@@ -20,6 +20,7 @@ export interface AuthState {
 export const loginAdmin = createAsyncThunk(
   'auth/loginAdmin',
   async (credentials: { email: string; password: string }, { rejectWithValue }) => {
+    console.log('Attempting login with credentials:', credentials);
     try {
       // Replace with your actual API endpoint
       const response = await fetch('/api/auth/login', {
@@ -29,6 +30,8 @@ export const loginAdmin = createAsyncThunk(
         },
         body: JSON.stringify(credentials),
       });
+
+      console.log('Login response status:', response);
 
       if (!response.ok) {
         const error = await response.json();
@@ -41,7 +44,8 @@ export const loginAdmin = createAsyncThunk(
       localStorage.setItem('adminToken', data.token);
       
       return data;
-    } catch {
+    } catch(error) {
+      console.log('Login error:', error);
       return rejectWithValue('Network error occurred');
     }
   }

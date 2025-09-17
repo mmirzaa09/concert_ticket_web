@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '../../context/AuthContext';
 import styles from './register.module.css';
 
 export default function Register() {
@@ -9,17 +11,30 @@ export default function Register() {
     name: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    role: 'organizer' as 'admin' | 'organizer'
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const { register, user } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    // Redirect if already authenticated
+    if (user) {
+      router.push('/dashboard');
+    }
+  }, [user, router]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+    // Clear error when user types
+    if (error) setError('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,15 +56,13 @@ export default function Register() {
     }
 
     try {
-      // TODO: Implement actual registration logic here
-      console.log('Registration attempt:', formData);
+      const success = await register(formData.email, formData.password, formData.name, formData.role);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // For demo purposes
-      alert('Registration successful!');
-      
+      if (success) {
+        router.push('/dashboard');
+      } else {
+        setError('Registration failed. Please try again.');
+      }
     } catch {
       setError('Registration failed. Please try again.');
     } finally {
@@ -132,6 +145,23 @@ export default function Register() {
               placeholder="Confirm your password"
               required
             />
+          </div>
+
+          <div className={styles.inputGroup}>
+            <label htmlFor="role" className={styles.label}>
+              Role
+            </label>
+            <select
+              id="role"
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+              className={styles.input}
+              required
+            >
+              <option value="organizer">Organizer</option>
+              <option value="admin">Admin</option>
+            </select>
           </div>
 
           <button
