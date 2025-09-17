@@ -91,7 +91,7 @@ export const concertsAPI = {
     return response.data
   },
 
-  create: async (concertData: {
+  create: async (concertData: FormData | {
     title: string;
     description: string;
     date: string;
@@ -99,7 +99,13 @@ export const concertsAPI = {
     price: number;
     status: 'active' | 'inactive';
   }) => {
-    const response = await api.post('/api/concerts', concertData)
+    const config = concertData instanceof FormData ? {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    } : {};
+    
+    const response = await api.post('/api/concert/create', concertData, config)
     return response.data
   },
 

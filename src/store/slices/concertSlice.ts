@@ -81,7 +81,7 @@ export const fetchConcertById = createAsyncThunk(
 
 export const createConcert = createAsyncThunk(
   'concerts/createConcert',
-  async (concertData: {
+  async (concertData: FormData | {
     title: string;
     description: string;
     date: string;
@@ -316,5 +316,5 @@ const concertSlice = createSlice({
 });
 
 export const { clearError, setCurrentConcert, clearConcerts } = concertSlice.actions;
-export { fetchConcertsByRole, updateConcertStatus };
+export { fetchConcertsByRole, createConcert, updateConcert, deleteConcert, updateConcertStatus };
 export default concertSlice.reducer;

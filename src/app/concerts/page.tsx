@@ -7,22 +7,22 @@ import Table from '../../components/Table'
 import { Form, FormField, Input, Textarea, Select, Button } from '../../components/Form'
 import { useAuth } from '../../context/AuthContext'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
-import { fetchConcertsByRole } from '../../store/slices/concertSlice'
+import { fetchConcertsByRole, createConcert } from '../../store/slices/concertSlice'
 import { concertsAPI } from '../../services/api'
 import styles from './concerts.module.css'
 
 interface Concert {
   id: string
   title: string
-  artist: string
+  artist?: string
   description: string
   date: string
   venue: string
   price: number
-  total_tickets: number
   status: number // 1 = active, 0 = inactive
   organizerId: string
   image_url?: string
+  total_tickets?: number
 }
 
 export default function Concerts() {
@@ -35,12 +35,16 @@ export default function Concerts() {
   const [formLoading, setFormLoading] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
+    artist: '',
     description: '',
     date: '',
     venue: '',
     price: '',
+    total_tickets: '',
     status: 1 as number // 1 = active, 0 = inactive
   })
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
 
   const isAdmin = user?.role === 'super_admin'
   const isOrganizer = user?.role === 'organizer'
@@ -69,41 +73,78 @@ export default function Concerts() {
     }))
   }
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setSelectedImage(file)
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file)
+      setImagePreview(previewUrl)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormLoading(true)
     
     try {
-      const concertData = {
-        title: formData.title,
-        description: formData.description,
-        date: formData.date,
-        venue: formData.venue,
-        price: Number(formData.price),
-        status: Number(formData.status),
-      }
-
       if (editingConcert) {
-        // Update existing concert
+        // Update existing concert (simplified for now)
+        const concertData = {
+          title: formData.title,
+          artist: formData.artist,
+          description: formData.description,
+          date: formData.date,
+          venue: formData.venue,
+          price: Number(formData.price),
+          status: Number(formData.status),
+        }
         await concertsAPI.update(editingConcert.id, concertData)
       } else {
-        // Add new concert
-        await concertsAPI.create(concertData)
+        // Create new concert with file upload
+        if (!selectedImage) {
+          alert('Please select an image for the concert')
+          setFormLoading(false)
+          return
+        }
+
+        // Create FormData for file upload
+        const formDataToSend = new FormData()
+        formDataToSend.append('title', formData.title)
+        formDataToSend.append('artist', formData.artist)
+        formDataToSend.append('date', formData.date)
+        formDataToSend.append('venue', formData.venue)
+        formDataToSend.append('price', formData.price)
+        formDataToSend.append('description', formData.description)
+        formDataToSend.append('total_tickets', formData.total_tickets)
+        formDataToSend.append('id_organizer', user?.id?.toString() || '')
+        formDataToSend.append('image', selectedImage)
+
+        // Use Redux action instead of direct API call
+        const result = await dispatch(createConcert(formDataToSend))
+        
+        if (createConcert.rejected.match(result)) {
+          throw new Error(result.payload as string || 'Failed to create concert')
+        }
       }
 
-      // Refresh the concerts list based on user role
-      if (isAdmin) {
-        dispatch(fetchConcertsByRole({ userRole: 'super_admin' }))
-      } else if (isOrganizer && user?.id) {
-        dispatch(fetchConcertsByRole({ 
-          userRole: 'organizer', 
-          organizerId: user.id.toString() 
-        }))
+      // Refresh the concerts list for update operations
+      // (Create operations are automatically handled by Redux slice)
+      if (editingConcert) {
+        if (isAdmin) {
+          dispatch(fetchConcertsByRole({ userRole: 'super_admin' }))
+        } else if (isOrganizer && user?.id) {
+          dispatch(fetchConcertsByRole({ 
+            userRole: 'organizer', 
+            organizerId: user.id.toString() 
+          }))
+        }
       }
 
       closeModal()
     } catch (error) {
       console.error('Failed to save concert:', error)
+      alert(`Failed to save concert: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setFormLoading(false)
     }
@@ -113,12 +154,16 @@ export default function Concerts() {
     setEditingConcert(concert)
     setFormData({
       title: concert.title,
+      artist: concert.artist || '',
       description: concert.description,
       date: concert.date,
       venue: concert.venue,
       price: concert.price.toString(),
+      total_tickets: concert.total_tickets?.toString() || '',
       status: concert.status
     })
+    setSelectedImage(null)
+    setImagePreview(null)
     setIsModalOpen(true)
   }
 
@@ -169,18 +214,27 @@ export default function Concerts() {
     setEditingConcert(null)
     setFormData({
       title: '',
+      artist: '',
       description: '',
       date: '',
       venue: '',
       price: '',
+      total_tickets: '',
       status: 1
     })
+    setSelectedImage(null)
+    setImagePreview(null)
     setIsModalOpen(true)
   }
 
   const closeModal = () => {
     setIsModalOpen(false)
     setEditingConcert(null)
+    setSelectedImage(null)
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview)
+    }
+    setImagePreview(null)
   }
 
   const columns = [
@@ -189,7 +243,7 @@ export default function Concerts() {
       label: 'Image',
       render: (value: string) => {
         // Construct full image URL from environment variable + image filename
-        const baseImageUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '') || 'http://192.168.1.135:3030';
+        const baseImageUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '');
         const fullImageUrl = value ? `${baseImageUrl}/uploads/${value}` : null;
         
         return (
@@ -225,6 +279,7 @@ export default function Concerts() {
       }
     },
     { key: 'title', label: 'Title' },
+    { key: 'artist', label: 'Artist' },
     { key: 'venue', label: 'Venue' },
     { 
       key: 'date', 
@@ -241,7 +296,7 @@ export default function Concerts() {
     { 
       key: 'price', 
       label: 'Price',
-      render: (value: number) => `Rp ${value.toLocaleString()}`
+      render: (value: number) => `Rp ${value ? value.toLocaleString() : '0'}`
     },
     {
       key: 'status',
@@ -309,12 +364,12 @@ export default function Concerts() {
                   />
                 </FormField>
 
-                <FormField label="Description">
-                  <Textarea
-                    name="description"
-                    value={formData.description}
+                <FormField label="Artist">
+                  <Input
+                    name="artist"
+                    value={formData.artist}
                     onChange={handleInputChange}
-                    placeholder="Concert description"
+                    placeholder="Artist name"
                     required
                   />
                 </FormField>
@@ -346,6 +401,47 @@ export default function Concerts() {
                     value={formData.price}
                     onChange={handleInputChange}
                     placeholder="Ticket price"
+                    required
+                  />
+                </FormField>
+
+                <FormField label="Total Tickets">
+                  <Input
+                    type="number"
+                    name="total_tickets"
+                    value={formData.total_tickets}
+                    onChange={handleInputChange}
+                    placeholder="Number of tickets available"
+                    required
+                  />
+                </FormField>
+
+                <FormField label="Concert Image">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    required={!editingConcert}
+                  />
+                  {imagePreview && (
+                    <div style={{ marginTop: '10px' }}>
+                      <Image
+                        src={imagePreview}
+                        alt="Preview"
+                        width={200}
+                        height={120}
+                        style={{ objectFit: 'cover', borderRadius: '4px' }}
+                      />
+                    </div>
+                  )}
+                </FormField>
+
+                <FormField label="Description">
+                  <Textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    placeholder="Concert description"
                     required
                   />
                 </FormField>
