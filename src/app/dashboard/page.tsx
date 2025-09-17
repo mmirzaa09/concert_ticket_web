@@ -1,30 +1,58 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import { useAuth } from '../../context/AuthContext';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { fetchConcertsByRole } from '../../store/slices/concertSlice';
 import styles from './dashboard.module.css';
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const dispatch = useAppDispatch();
+  const { concerts, loading, error } = useAppSelector((state) => state.concerts);
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'super_admin';
+  const isOrganizer = user?.role === 'organizer';
 
-  // Mock stats data
+  // Fetch concerts based on user role
+  useEffect(() => {
+    if (isAdmin) {
+      console.log('Fetching concerts for super_admin');
+      dispatch(fetchConcertsByRole({ userRole: 'super_admin' }));
+    }
+
+    if (isOrganizer && user.id) {
+      console.log('Fetching concerts for organizer ID:', user.id);
+      dispatch(fetchConcertsByRole({ 
+        userRole: 'organizer', 
+        organizerId: user.id.toString() 
+      }));
+    }
+  }, [user, dispatch, isAdmin, isOrganizer]);
+
+  // Calculate stats from actual concert data
   const stats = {
-    totalConcerts: 15,
-    activeConcerts: 8,
-    totalUsers: 45,
-    totalRevenue: 15750000,
+    totalConcerts: concerts.length,
+    activeConcerts: concerts.filter(concert => 
+      concert.status === 1 || concert.status === 0
+    ).length,
+    totalUsers: isAdmin ? 45 : 0, // Only show for admin
+    totalRevenue: concerts.reduce((total, concert) => 
+      total + (concert.price * (concert.totalTickets - concert.availableTickets)), 0
+    ),
     pendingPayments: 3
   };
 
   return (
-    <ProtectedRoute allowedRoles={['admin', 'organizer']}>
+    <ProtectedRoute allowedRoles={['super_admin', 'organizer']}>
       <div className={styles.container}>
         <div className={styles.header}>
           <h1>Dashboard</h1>
           <p>Welcome back, {user?.name}!</p>
+          {loading && <p>Loading concerts...</p>}
+          {error && <p className={styles.error}>Error: {error}</p>}
         </div>
 
         <div className={styles.statsGrid}>
@@ -97,35 +125,71 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Concert List Section */}
         <div className={styles.recentActivity}>
-          <h2>Recent Activity</h2>
-          <div className={styles.activityList}>
-            <div className={styles.activityItem}>
-              <span className={styles.activityIcon}>🎵</span>
-              <div>
-                <p className={styles.activityTitle}>New concert &quot;Rock Festival 2024&quot; added</p>
-                <p className={styles.activityTime}>2 hours ago</p>
-              </div>
+          <h2>{isOrganizer ? 'Your Concerts' : 'Recent Concerts'}</h2>
+          {concerts.length > 0 ? (
+            <div className={styles.activityList}>
+              {concerts.slice(0, 6).map((concert) => (
+                <div key={concert.id_concert} className={styles.activityItem}>
+                  <span className={styles.activityIcon}>🎵</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <p className={styles.activityTitle}>{concert.title || concert.name}</p>
+                      <span style={{ 
+                        padding: '0.25rem 0.5rem', 
+                        borderRadius: '0.25rem', 
+                        fontSize: '0.75rem',
+                        backgroundColor: concert.status === 1 ? '#10b981' : '#6b7280',
+                        color: 'white'
+                      }}>
+                        {concert.status || 'draft'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <p className={styles.activityTime}>
+                        📅 {new Date(concert.date).toLocaleDateString()} 
+                        {concert.time && ` • ⏰ ${concert.time}`}
+                      </p>
+                      <p className={styles.activityTime}>
+                        📍 {concert.venue} • 💰 Rp {concert.price?.toLocaleString() || '0'}
+                      </p>
+                      <p className={styles.activityTime}>
+                        🎫 {concert.available_tickets || concert.availableTickets || 0}/{concert.total_tickets || concert.totalTickets || 0} tickets available
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-
-            <div className={styles.activityItem}>
-              <span className={styles.activityIcon}>💳</span>
-              <div>
-                <p className={styles.activityTitle}>Payment received for Jazz Night</p>
-                <p className={styles.activityTime}>5 hours ago</p>
-              </div>
-            </div>
-
-            {isAdmin && (
+          ) : (
+            <div className={styles.activityList}>
               <div className={styles.activityItem}>
-                <span className={styles.activityIcon}>👤</span>
+                <span className={styles.activityIcon}>🎵</span>
                 <div>
-                  <p className={styles.activityTitle}>New organizer account created</p>
-                  <p className={styles.activityTime}>1 day ago</p>
+                  <p className={styles.activityTitle}>
+                    {isOrganizer 
+                      ? "You haven't created any concerts yet." 
+                      : "No concerts found in the system."
+                    }
+                  </p>
+                  <p className={styles.activityTime}>
+                    <Link href="/concerts/create" className={styles.statLink}>
+                      Create Your First Concert →
+                    </Link>
+                  </p>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+          
+          {concerts.length > 6 && (
+            <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+              <Link href="/concerts" className={styles.statLink}>
+                View All {concerts.length} Concerts →
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </ProtectedRoute>

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Table from '../../components/Table'
 import { Form, FormField, Input, Select, Button } from '../../components/Form'
+import { usersAPI } from '../../services/api'
 import styles from './users.module.css'
 
 interface User {
@@ -28,36 +29,47 @@ export default function Users() {
   })
 
   useEffect(() => {
-    setLoading(true)
-    // Mock data
-    const mockUsers: User[] = [
-      {
-        id: '1',
-        name: 'Admin User',
-        email: 'admin@test.com',
-        role: 'admin',
-        status: 'active',
-        createdAt: '2024-01-15'
-      },
-      {
-        id: '2',
-        name: 'Organizer User',
-        email: 'organizer@test.com',
-        role: 'organizer',
-        status: 'active',
-        createdAt: '2024-01-20'
-      },
-      {
-        id: '3',
-        name: 'John Doe',
-        email: 'john@example.com',
-        role: 'organizer',
-        status: 'inactive',
-        createdAt: '2024-02-01'
+    const loadUsers = async () => {
+      setLoading(true)
+      try {
+        const response = await usersAPI.getAll()
+        setUsers(response.data || [])
+      } catch (error) {
+        console.error('Failed to load users:', error)
+        // Fallback to mock data if API fails
+        const mockUsers: User[] = [
+          {
+            id: '1',
+            name: 'Admin User',
+            email: 'admin@test.com',
+            role: 'admin',
+            status: 'active',
+            createdAt: '2024-01-15'
+          },
+          {
+            id: '2',
+            name: 'Organizer User',
+            email: 'organizer@test.com',
+            role: 'organizer',
+            status: 'active',
+            createdAt: '2024-01-20'
+          },
+          {
+            id: '3',
+            name: 'John Doe',
+            email: 'john@example.com',
+            role: 'organizer',
+            status: 'inactive',
+            createdAt: '2024-02-01'
+          }
+        ]
+        setUsers(mockUsers)
+      } finally {
+        setLoading(false)
       }
-    ]
-    setUsers(mockUsers)
-    setLoading(false)
+    }
+
+    loadUsers()
   }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { authAPI } from '../services/api'
 
 export interface User {
   id: string
@@ -66,35 +67,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // Connect to organizer login endpoint
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/organizer/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      const data = await authAPI.login(email, password);
 
-      if (!response.ok) {
-        console.error('Login failed:', response.statusText);
-        return false;
-      }
-
-      const data = await response.json();
-      
-      // Transform organizer data to match auth interface
       const userData: User = {
-        id: data.organizer?.id || data.organizer?.id_organizer,
-        email: data.organizer?.email,
-        name: data.organizer?.name,
-        role: 'organizer',
+        id: data.data.id_organizer,
+        email: data.data.email,
+        name: data.data.name,
+        role: data.data.role,
       };
 
-      setToken(data.token);
+      setToken(data.data.token);
       setUser(userData);
-      localStorage.setItem('token', data.token);
+      localStorage.setItem('token', data.data.token);
       localStorage.setItem('user', JSON.stringify(userData));
-      
+
       return true;
     } catch (error) {
       console.error('Login error:', error);
@@ -112,23 +98,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     website?: string;
   }): Promise<boolean> => {
     try {
-      const backendData = {
-        ...registerData,
-        phone_number: registerData.phone,
-      };
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/organizer/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(backendData),
-      });
-
-      if (!response.ok) {
-        console.error('Registration failed:', response.statusText);
-        return false;
-      }
+      await authAPI.register(registerData);
 
       // Registration successful, but don't auto-login
       // User must login separately after registration

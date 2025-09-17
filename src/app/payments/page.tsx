@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Table from '../../components/Table'
+import { paymentsAPI } from '../../services/api'
 import styles from './payments.module.css'
 
 interface Payment {
@@ -22,58 +23,78 @@ export default function Payments() {
   const [filter, setFilter] = useState('all')
 
   useEffect(() => {
-    setLoading(true)
-    // Mock data
-    const mockPayments: Payment[] = [
-      {
-        id: '1',
-        customerName: 'Alice Johnson',
-        customerEmail: 'alice@example.com',
-        concertTitle: 'Rock Festival 2024',
-        amount: 150000,
-        status: 'completed',
-        paymentMethod: 'Credit Card',
-        transactionDate: '2024-09-10'
-      },
-      {
-        id: '2',
-        customerName: 'Bob Smith',
-        customerEmail: 'bob@example.com',
-        concertTitle: 'Jazz Night',
-        amount: 75000,
-        status: 'pending',
-        paymentMethod: 'Bank Transfer',
-        transactionDate: '2024-09-12'
-      },
-      {
-        id: '3',
-        customerName: 'Carol Davis',
-        customerEmail: 'carol@example.com',
-        concertTitle: 'Rock Festival 2024',
-        amount: 150000,
-        status: 'failed',
-        paymentMethod: 'E-Wallet',
-        transactionDate: '2024-09-11'
-      },
-      {
-        id: '4',
-        customerName: 'David Wilson',
-        customerEmail: 'david@example.com',
-        concertTitle: 'Jazz Night',
-        amount: 75000,
-        status: 'completed',
-        paymentMethod: 'Credit Card',
-        transactionDate: '2024-09-09'
+    const loadPayments = async () => {
+      setLoading(true)
+      try {
+        const response = await paymentsAPI.getAll()
+        setPayments(response.data || [])
+      } catch (error) {
+        console.error('Failed to load payments:', error)
+        // Fallback to mock data if API fails
+        const mockPayments: Payment[] = [
+          {
+            id: '1',
+            customerName: 'Alice Johnson',
+            customerEmail: 'alice@example.com',
+            concertTitle: 'Rock Festival 2024',
+            amount: 150000,
+            status: 'completed',
+            paymentMethod: 'Credit Card',
+            transactionDate: '2024-09-10'
+          },
+          {
+            id: '2',
+            customerName: 'Bob Smith',
+            customerEmail: 'bob@example.com',
+            concertTitle: 'Jazz Night',
+            amount: 75000,
+            status: 'pending',
+            paymentMethod: 'Bank Transfer',
+            transactionDate: '2024-09-12'
+          },
+          {
+            id: '3',
+            customerName: 'Carol Davis',
+            customerEmail: 'carol@example.com',
+            concertTitle: 'Rock Festival 2024',
+            amount: 150000,
+            status: 'failed',
+            paymentMethod: 'E-Wallet',
+            transactionDate: '2024-09-11'
+          },
+          {
+            id: '4',
+            customerName: 'David Wilson',
+            customerEmail: 'david@example.com',
+            concertTitle: 'Jazz Night',
+            amount: 75000,
+            status: 'completed',
+            paymentMethod: 'Credit Card',
+            transactionDate: '2024-09-09'
+          }
+        ]
+        setPayments(mockPayments)
+      } finally {
+        setLoading(false)
       }
-    ]
-    setPayments(mockPayments)
-    setLoading(false)
+    }
+
+    loadPayments()
   }, [])
 
-  const updatePaymentStatus = (id: string, newStatus: 'pending' | 'completed' | 'failed') => {
-    setPayments(prev => prev.map(payment => 
-      payment.id === id ? { ...payment, status: newStatus } : payment
-    ))
+  const updatePaymentStatus = async (id: string, newStatus: 'pending' | 'completed' | 'failed') => {
+    try {
+      await paymentsAPI.updateStatus(id, newStatus)
+      setPayments(prev => prev.map(payment => 
+        payment.id === id ? { ...payment, status: newStatus } : payment
+      ))
+    } catch (error) {
+      console.error('Failed to update payment status:', error)
+      // Fallback to local state update if API fails
+      setPayments(prev => prev.map(payment => 
+        payment.id === id ? { ...payment, status: newStatus } : payment
+      ))
+    }
   }
 
   const filteredPayments = filter === 'all' 

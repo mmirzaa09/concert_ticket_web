@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { concertsAPI } from '../../services/api';
 
 // Types
 export interface Concert {
@@ -32,23 +33,35 @@ export const fetchConcerts = createAsyncThunk(
   'concerts/fetchConcerts',
   async (params: { page?: number; limit?: number; search?: string } = {}, { rejectWithValue }) => {
     try {
-      const queryParams = new URLSearchParams({
-        page: (params.page || 1).toString(),
-        limit: (params.limit || 10).toString(),
-        ...(params.search && { search: params.search }),
-      });
-
-      const response = await fetch(`/api/concerts?${queryParams}`);
-      
-      if (!response.ok) {
-        const error = await response.json();
-        return rejectWithValue(error.message || 'Failed to fetch concerts');
-      }
-
-      const data = await response.json();
+      const data = await concertsAPI.getAll(params);
       return data;
-    } catch {
-      return rejectWithValue('Network error occurred');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch concerts';
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
+export const fetchConcertsByRole = createAsyncThunk(
+  'concerts/fetchConcertsByRole',
+  async (params: { 
+    userRole: 'super_admin' | 'organizer'; 
+    organizerId?: string; 
+  }, { rejectWithValue }) => {
+    try {
+      if (params.userRole === 'organizer' && params.organizerId) {
+        // Use specific method for organizer concerts
+        const data = await concertsAPI.getByOrganizerId(params.organizerId);
+        return data;
+      } else {
+        // For admin or when no organizerId, get all concerts
+        const data = await concertsAPI.getAll();
+        return data;
+      }
+    } catch (error) {
+      console.log('check error', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch concerts by role';
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -57,71 +70,54 @@ export const fetchConcertById = createAsyncThunk(
   'concerts/fetchConcertById',
   async (concertId: string, { rejectWithValue }) => {
     try {
-      const response = await fetch(`/api/concerts/${concertId}`);
-      
-      if (!response.ok) {
-        const error = await response.json();
-        return rejectWithValue(error.message || 'Failed to fetch concert');
-      }
-
-      const data = await response.json();
+      const data = await concertsAPI.getById(concertId);
       return data;
-    } catch {
-      return rejectWithValue('Network error occurred');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch concert';
+      return rejectWithValue(errorMessage);
     }
   }
 );
 
 export const createConcert = createAsyncThunk(
   'concerts/createConcert',
-  async (concertData: Omit<Concert, 'id' | 'createdAt' | 'updatedAt'>, { rejectWithValue }) => {
+  async (concertData: {
+    title: string;
+    description: string;
+    date: string;
+    venue: string;
+    price: number;
+    status: 'active' | 'inactive';
+  }, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch('/api/concerts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(concertData),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        return rejectWithValue(error.message || 'Failed to create concert');
-      }
-
-      const data = await response.json();
+      const data = await concertsAPI.create(concertData);
       return data;
-    } catch {
-      return rejectWithValue('Network error occurred');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create concert';
+      return rejectWithValue(errorMessage);
     }
   }
 );
 
 export const updateConcert = createAsyncThunk(
   'concerts/updateConcert',
-  async ({ id, updates }: { id: string; updates: Partial<Concert> }, { rejectWithValue }) => {
+  async ({ id, updates }: { 
+    id: string; 
+    updates: {
+      title: string;
+      description: string;
+      date: string;
+      venue: string;
+      price: number;
+      status: 'active' | 'inactive';
+    }
+  }, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`/api/concerts/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(updates),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        return rejectWithValue(error.message || 'Failed to update concert');
-      }
-
-      const data = await response.json();
+      const data = await concertsAPI.update(id, updates);
       return data;
-    } catch {
-      return rejectWithValue('Network error occurred');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update concert';
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -130,22 +126,24 @@ export const deleteConcert = createAsyncThunk(
   'concerts/deleteConcert',
   async (concertId: string, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`/api/concerts/${concertId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        return rejectWithValue(error.message || 'Failed to delete concert');
-      }
-
+      await concertsAPI.delete(concertId);
       return concertId;
-    } catch {
-      return rejectWithValue('Network error occurred');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete concert';
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
+export const updateConcertStatus = createAsyncThunk(
+  'concerts/updateConcertStatus',
+  async ({ id, status }: { id: string; status: 'active' | 'inactive' }, { rejectWithValue }) => {
+    try {
+      const data = await concertsAPI.updateStatus(id, status);
+      return { id, status, data };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update concert status';
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -191,6 +189,35 @@ const concertSlice = createSlice({
         state.currentPage = action.payload.currentPage || 1;
       })
       .addCase(fetchConcerts.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      });
+
+    // Fetch concerts by role
+    builder
+      .addCase(fetchConcertsByRole.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchConcertsByRole.fulfilled, (state, action) => {
+        state.loading = false;
+        // Handle both paginated and non-paginated responses
+        if (action.payload.data && Array.isArray(action.payload.data)) {
+          // Backend response format: { success: true, message: string, data: Concert[] }
+          state.concerts = action.payload.data;
+        } else if (Array.isArray(action.payload.concerts)) {
+          // Paginated response format
+          state.concerts = action.payload.concerts;
+          state.totalPages = action.payload.totalPages || 1;
+          state.currentPage = action.payload.currentPage || 1;
+        } else if (Array.isArray(action.payload)) {
+          // Direct array response
+          state.concerts = action.payload;
+        } else {
+          state.concerts = [];
+        }
+      })
+      .addCase(fetchConcertsByRole.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });
@@ -263,8 +290,31 @@ const concertSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       });
+
+    // Update concert status
+    builder
+      .addCase(updateConcertStatus.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateConcertStatus.fulfilled, (state, action) => {
+        state.loading = false;
+        const { id, status } = action.payload;
+        const index = state.concerts.findIndex(concert => concert.id === id);
+        if (index !== -1) {
+          state.concerts[index] = { ...state.concerts[index], status };
+        }
+        if (state.currentConcert?.id === id) {
+          state.currentConcert = { ...state.currentConcert, status };
+        }
+      })
+      .addCase(updateConcertStatus.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      });
   },
 });
 
 export const { clearError, setCurrentConcert, clearConcerts } = concertSlice.actions;
+export { fetchConcertsByRole, updateConcertStatus };
 export default concertSlice.reducer;
