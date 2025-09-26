@@ -3,6 +3,8 @@ import authSlice from './slices/authSlice';
 import concertSlice from './slices/concertSlice';
 import organizerSlice from './slices/organizerSlice';
 import uiSlice from './slices/uiSlice';
+import userSlice from './slices/userSlice';
+import orderSlice from './slices/orderSlice';
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +12,8 @@ export const store = configureStore({
     concerts: concertSlice,
     organizers: organizerSlice,
     ui: uiSlice,
+    users: userSlice,
+    orders: orderSlice,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

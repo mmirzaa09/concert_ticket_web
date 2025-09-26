@@ -20,7 +20,6 @@ export interface AuthState {
 export const loginAdmin = createAsyncThunk(
   'auth/loginAdmin',
   async (credentials: { email: string; password: string }, { rejectWithValue }) => {
-    console.log('Attempting login with credentials:', credentials);
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/organizer/login`, {
         method: 'POST',

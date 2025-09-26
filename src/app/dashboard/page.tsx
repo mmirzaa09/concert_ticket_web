@@ -5,13 +5,17 @@ import Link from 'next/link';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import { useAuth } from '../../context/AuthContext';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { fetchConcertsByRole } from '../../store/slices/concertSlice';
 import styles from './dashboard.module.css';
+import { fetchConcertsByRole } from '../../store/slices/concertSlice';
+import { fetchUsers } from '../../store/slices/userSlice';
+import { fetchOrders } from '../../store/slices/orderSlice';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const dispatch = useAppDispatch();
   const { concerts, loading, error } = useAppSelector((state) => state.concerts);
+  const { users } = useAppSelector((state) => state.users);
+  const { orders } = useAppSelector((state) => state.orders);
 
   const isAdmin = user?.role === 'super_admin';
   const isOrganizer = user?.role === 'organizer';
@@ -19,12 +23,12 @@ export default function Dashboard() {
   // Fetch concerts based on user role
   useEffect(() => {
     if (isAdmin) {
-      console.log('Fetching concerts for super_admin');
       dispatch(fetchConcertsByRole({ userRole: 'super_admin' }));
+      dispatch(fetchUsers());
+      dispatch(fetchOrders());
     }
 
     if (isOrganizer && user.id) {
-      console.log('Fetching concerts for organizer ID:', user.id);
       dispatch(fetchConcertsByRole({ 
         userRole: 'organizer', 
         organizerId: user.id.toString() 
@@ -32,17 +36,14 @@ export default function Dashboard() {
     }
   }, [user, dispatch, isAdmin, isOrganizer]);
 
-  // Calculate stats from actual concert data
   const stats = {
     totalConcerts: concerts.length,
     activeConcerts: concerts.filter(concert => 
       concert.status === 1 || concert.status === 0
     ).length,
-    totalUsers: isAdmin ? 45 : 0, // Only show for admin
-    totalRevenue: concerts.reduce((total, concert) => 
-      total + (concert.price * (concert.totalTickets - concert.availableTickets)), 0
-    ),
-    pendingPayments: 3
+    totalUsers: isAdmin ? users.length : 0, 
+    totalOrders: isAdmin ? orders.length : 0, 
+    totalOrderOrganizer: isOrganizer ? orders.length : 0 
   };
 
   return (
@@ -83,18 +84,18 @@ export default function Dashboard() {
               </div>
 
               <div className={styles.statCard}>
-                <h3>Total Revenue</h3>
-                <p className={styles.statNumber}>Rp {stats.totalRevenue.toLocaleString()}</p>
+                <h3>Total Orders</h3>
+                <p className={styles.statNumber}>{stats.totalOrders}</p>
                 <Link href="/payments" className={styles.statLink}>
-                  View payments →
+                  Manage Orders →
                 </Link>
               </div>
 
               <div className={styles.statCard}>
-                <h3>Pending Payments</h3>
-                <p className={styles.statNumber}>{stats.pendingPayments}</p>
+                <h3>List Payments</h3>
+                <p className={styles.statNumber}>{stats.totalOrders}</p>
                 <Link href="/payments" className={styles.statLink}>
-                  Review payments →
+                  Manage payments →
                 </Link>
               </div>
             </>
