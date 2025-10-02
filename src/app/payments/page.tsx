@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Table from '../../components/Table'
-import { paymentsAPI } from '../../services/api'
+import { ordersAPI } from '../../services/api'
 import styles from './payments.module.css'
 
 interface Payment {
@@ -11,10 +11,10 @@ interface Payment {
   customerName: string
   customerEmail: string
   concertTitle: string
-  amount: number
-  status: 'pending' | 'completed' | 'failed'
+  amount: number | string  // Handle both number and string types
+  status: 'pending' | 'paid' | 'cancelled'
   paymentMethod: string
-  transactionDate: string
+  bookingDate: string
 }
 
 export default function Payments() {
@@ -26,90 +26,40 @@ export default function Payments() {
     const loadPayments = async () => {
       setLoading(true)
       try {
-        const response = await paymentsAPI.getAll()
+        const response = await ordersAPI.getAllWithDetails()
+        setLoading(false)
         setPayments(response.data || [])
       } catch (error) {
         console.error('Failed to load payments:', error)
-        // Fallback to mock data if API fails
-        const mockPayments: Payment[] = [
-          {
-            id: '1',
-            customerName: 'Alice Johnson',
-            customerEmail: 'alice@example.com',
-            concertTitle: 'Rock Festival 2024',
-            amount: 150000,
-            status: 'completed',
-            paymentMethod: 'Credit Card',
-            transactionDate: '2024-09-10'
-          },
-          {
-            id: '2',
-            customerName: 'Bob Smith',
-            customerEmail: 'bob@example.com',
-            concertTitle: 'Jazz Night',
-            amount: 75000,
-            status: 'pending',
-            paymentMethod: 'Bank Transfer',
-            transactionDate: '2024-09-12'
-          },
-          {
-            id: '3',
-            customerName: 'Carol Davis',
-            customerEmail: 'carol@example.com',
-            concertTitle: 'Rock Festival 2024',
-            amount: 150000,
-            status: 'failed',
-            paymentMethod: 'E-Wallet',
-            transactionDate: '2024-09-11'
-          },
-          {
-            id: '4',
-            customerName: 'David Wilson',
-            customerEmail: 'david@example.com',
-            concertTitle: 'Jazz Night',
-            amount: 75000,
-            status: 'completed',
-            paymentMethod: 'Credit Card',
-            transactionDate: '2024-09-09'
-          }
-        ]
         setPayments(mockPayments)
-      } finally {
-        setLoading(false)
       }
     }
 
     loadPayments()
   }, [])
 
-  const updatePaymentStatus = async (id: string, newStatus: 'pending' | 'completed' | 'failed') => {
-    try {
-      await paymentsAPI.updateStatus(id, newStatus)
-      setPayments(prev => prev.map(payment => 
-        payment.id === id ? { ...payment, status: newStatus } : payment
-      ))
-    } catch (error) {
-      console.error('Failed to update payment status:', error)
-      // Fallback to local state update if API fails
-      setPayments(prev => prev.map(payment => 
-        payment.id === id ? { ...payment, status: newStatus } : payment
-      ))
-    }
-  }
-
   const filteredPayments = filter === 'all' 
     ? payments 
     : payments.filter(payment => payment.status === filter)
 
   const getStatusStats = () => {
+    // Debug: check payment data types
+    console.log('First payment amount:', payments[0]?.amount, 'Type:', typeof payments[0]?.amount)
+    
     const stats = payments.reduce((acc, payment) => {
       acc[payment.status] = (acc[payment.status] || 0) + 1
       return acc
     }, {} as Record<string, number>)
 
     const totalAmount = payments
-      .filter(p => p.status === 'completed')
-      .reduce((sum, p) => sum + p.amount, 0)
+      .filter(p => p.status === 'paid')
+      .reduce((sum, p) => {
+        const amount = typeof p.amount === 'string' ? parseFloat(p.amount) : p.amount
+        console.log('Processing amount:', p.amount, 'Type:', typeof p.amount, 'Converted:', amount, 'Running sum:', sum)
+        return sum + (amount || 0)
+      }, 0)
+
+      console.log('Payment stats:', stats, 'Total Amount:', totalAmount)
 
     return { ...stats, totalAmount }
   }
@@ -123,46 +73,31 @@ export default function Payments() {
     { 
       key: 'amount', 
       label: 'Amount',
-      render: (value: number) => `Rp ${value.toLocaleString()}`
+      render: (value: number | string) => {
+        const amount = typeof value === 'string' ? parseFloat(value) : value
+        return `Rp ${(amount || 0).toLocaleString()}`
+      }
     },
     {
       key: 'status',
       label: 'Status',
-      render: (value: string, row: Payment) => (
+      render: (value: string) => (
         <div className={styles.statusColumn}>
           <span className={`${styles.statusTag} ${styles[value]}`}>
             {value}
           </span>
-          {value === 'pending' && (
-            <div className={styles.statusActions}>
-              <button
-                onClick={() => updatePaymentStatus(row.id, 'completed')}
-                className={styles.approveButton}
-                title="Mark as completed"
-              >
-                ✓
-              </button>
-              <button
-                onClick={() => updatePaymentStatus(row.id, 'failed')}
-                className={styles.rejectButton}
-                title="Mark as failed"
-              >
-                ✗
-              </button>
-            </div>
-          )}
         </div>
       )
     },
     { key: 'paymentMethod', label: 'Method' },
-    { key: 'transactionDate', label: 'Date' }
+    { key: 'bookingDate', label: 'Date' }
   ]
 
   return (
-    <ProtectedRoute allowedRoles={['admin']}>
+    <ProtectedRoute allowedRoles={['super_admin']}>
       <div className={styles.container}>
         <div className={styles.header}>
-          <h1>Payments Management</h1>
+          <h1>Order Management</h1>
         </div>
 
         <div className={styles.stats}>
@@ -172,15 +107,15 @@ export default function Payments() {
           </div>
           <div className={styles.statCard}>
             <h3>Completed</h3>
-            <p className={styles.statValue}>{stats.completed || 0}</p>
+            <p className={styles.statValue}>{stats.paid || 0}</p>
           </div>
           <div className={styles.statCard}>
             <h3>Pending</h3>
             <p className={styles.statValue}>{stats.pending || 0}</p>
           </div>
           <div className={styles.statCard}>
-            <h3>Failed</h3>
-            <p className={styles.statValue}>{stats.failed || 0}</p>
+            <h3>Cancelled</h3>
+            <p className={styles.statValue}>{stats.cancelled || 0}</p>
           </div>
         </div>
 
@@ -198,16 +133,16 @@ export default function Payments() {
             Pending ({stats.pending || 0})
           </button>
           <button
-            onClick={() => setFilter('completed')}
-            className={`${styles.filterButton} ${filter === 'completed' ? styles.active : ''}`}
+            onClick={() => setFilter('paid')}
+            className={`${styles.filterButton} ${filter === 'paid' ? styles.active : ''}`}
           >
-            Completed ({stats.completed || 0})
+            Completed ({stats.paid || 0})
           </button>
           <button
-            onClick={() => setFilter('failed')}
-            className={`${styles.filterButton} ${filter === 'failed' ? styles.active : ''}`}
+            onClick={() => setFilter('cancelled')}
+            className={`${styles.filterButton} ${filter === 'cancelled' ? styles.active : ''}`}
           >
-            Failed ({stats.failed || 0})
+            Failed ({stats.cancelled || 0})
           </button>
         </div>
 

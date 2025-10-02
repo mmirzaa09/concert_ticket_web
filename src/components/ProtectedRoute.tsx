@@ -6,13 +6,13 @@ import { useAuth } from '../context/AuthContext'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
-  allowedRoles?: ('admin' | 'organizer')[]
+  allowedRoles?: ( 'organizer' | 'super_admin')[]
   redirectTo?: string
 }
 
 export default function ProtectedRoute({ 
   children, 
-  allowedRoles = ['admin', 'organizer'], 
+  allowedRoles = ['organizer', 'super_admin'], 
   redirectTo = '/login' 
 }: ProtectedRouteProps) {
   const { user, isLoading } = useAuth()

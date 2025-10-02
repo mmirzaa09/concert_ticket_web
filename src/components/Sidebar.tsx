@@ -9,13 +9,16 @@ export default function Sidebar() {
   const { user } = useAuth()
   const pathname = usePathname()
 
+  console.log('Sidebar user:', user.role)
+
   if (!user) return null
 
   const menuItems = [
-    { href: '/dashboard', label: 'Dashboard', roles: ['admin', 'organizer'] },
-    { href: '/concerts', label: 'Concerts', roles: ['admin', 'organizer'] },
-    { href: '/users', label: 'Users', roles: ['admin'] },
-    { href: '/payments', label: 'Payments', roles: ['admin'] },
+    { href: '/dashboard', label: 'Dashboard', roles: ['super_admin', 'organizer'] },
+    { href: '/concerts', label: 'Concerts', roles: ['super_admin', 'organizer'] },
+    { href: '/users', label: 'Users', roles: ['super_admin'] },
+    { href: '/payments', label: 'Orders', roles: ['super_admin'] },
+    { href: '/transactions', label: 'Transactions', roles: ['super_admin'] },
   ]
 
   const filteredMenuItems = menuItems.filter(item => 

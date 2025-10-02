@@ -91,12 +91,12 @@
   color: #d97706;
 }
 
-.statusTag.completed {
+.statusTag.paid {
   background-color: #d1fae5;
   color: #059669;
 }
 
-.statusTag.failed {
+.statusTag.cancelled {
   background-color: #fee2e2;
   color: #dc2626;
 }

@@ -18,11 +18,13 @@ export interface User {
 
 export interface UserState {
   users: User[];
+  listUsers: User[]; // Add this property that's being used in the reducer
   currentUser: User | null;
   loading: boolean;
   error: string | null;
   totalPages: number;
   currentPage: number;
+  totalUsers: number; // Add this property that's being used in the reducer
 }
 
 // Async thunks
@@ -55,11 +57,13 @@ export const fetchUserById = createAsyncThunk(
 // Initial state
 const initialState: UserState = {
   users: [],
+  listUsers: [], // Initialize the missing property
   currentUser: null,
   loading: false,
   error: null,
   totalPages: 1,
   currentPage: 1,
+  totalUsers: 0, // Initialize the missing property
 };
 
 // Slice
@@ -75,8 +79,10 @@ const userSlice = createSlice({
     },
     clearUsers: (state) => {
       state.users = [];
+      state.listUsers = [];
       state.currentUser = null;
       state.error = null;
+      state.totalUsers = 0;
     },
   },
   extraReducers: (builder) => {
@@ -114,5 +120,4 @@ const userSlice = createSlice({
 });
 
 export const { clearError, setCurrentUser, clearUsers } = userSlice.actions;
-export { updateUserStatus };
 export default userSlice.reducer;

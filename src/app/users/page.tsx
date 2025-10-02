@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Table from '../../components/Table'
 import { Form, FormField, Input, Select, Button } from '../../components/Form'
-import { usersAPI } from '../../services/api'
+import { useAppDispatch, useAppSelector } from '../../store/hooks'
+import { fetchUsers, clearError } from '../../store/slices/userSlice'
 import styles from './users.module.css'
 
 interface User {
@@ -17,10 +18,11 @@ interface User {
 }
 
 export default function Users() {
-  const [users, setUsers] = useState<User[]>([])
+  const dispatch = useAppDispatch()
+  const { users, listUsers, loading, error } = useAppSelector((state) => state.users)
+  
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -28,49 +30,46 @@ export default function Users() {
     status: 'active' as 'active' | 'inactive'
   })
 
-  useEffect(() => {
-    const loadUsers = async () => {
-      setLoading(true)
-      try {
-        const response = await usersAPI.getAll()
-        setUsers(response.data || [])
-      } catch (error) {
-        console.error('Failed to load users:', error)
-        // Fallback to mock data if API fails
-        const mockUsers: User[] = [
-          {
-            id: '1',
-            name: 'Admin User',
-            email: 'admin@test.com',
-            role: 'admin',
-            status: 'active',
-            createdAt: '2024-01-15'
-          },
-          {
-            id: '2',
-            name: 'Organizer User',
-            email: 'organizer@test.com',
-            role: 'organizer',
-            status: 'active',
-            createdAt: '2024-01-20'
-          },
-          {
-            id: '3',
-            name: 'John Doe',
-            email: 'john@example.com',
-            role: 'organizer',
-            status: 'inactive',
-            createdAt: '2024-02-01'
-          }
-        ]
-        setUsers(mockUsers)
-      } finally {
-        setLoading(false)
-      }
-    }
+  // Use the users data from Redux, fallback to listUsers if users is empty
+  const displayUsers = users.length > 0 ? users : listUsers
 
-    loadUsers()
-  }, [])
+  useEffect(() => {
+    console.log('Loading users via Redux...')
+    dispatch(fetchUsers())
+  }, [dispatch])
+
+  useEffect(() => {
+    if (error) {
+      console.error('Users error:', error)
+      // Clear error after showing it
+      setTimeout(() => {
+        dispatch(clearError())
+      }, 5000)
+    }
+  }, [error, dispatch])
+
+  // Fallback data if both Redux arrays are empty and not loading
+  const fallbackUsers: User[] = [
+    {
+      id: '1',
+      name: 'Admin User',
+      email: 'admin@test.com',
+      role: 'admin',
+      status: 'active',
+      createdAt: '2024-01-15'
+    },
+    {
+      id: '2',
+      name: 'Organizer User',
+      email: 'organizer@test.com',
+      role: 'organizer',
+      status: 'active',
+      createdAt: '2024-01-20'
+    }
+  ]
+
+  // Use Redux data, or fallback data if no data and not loading
+  const finalDisplayUsers = displayUsers.length > 0 ? displayUsers : (!loading ? fallbackUsers : [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -83,21 +82,15 @@ export default function Users() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
-    const userData: User = {
-      id: editingUser?.id || Date.now().toString(),
-      name: formData.name,
-      email: formData.email,
-      role: formData.role,
-      status: formData.status,
-      createdAt: editingUser?.createdAt || new Date().toISOString().split('T')[0]
-    }
-
+    // TODO: Implement create/update user Redux actions
+    console.log('Form submitted:', formData)
+    
     if (editingUser) {
-      setUsers(prev => prev.map(user => 
-        user.id === editingUser.id ? userData : user
-      ))
+      console.log('Updating user:', editingUser.id)
+      // For now, just close modal - implement update user API call later
     } else {
-      setUsers(prev => [...prev, userData])
+      console.log('Creating new user')
+      // For now, just close modal - implement create user API call later
     }
 
     closeModal()
@@ -116,16 +109,12 @@ export default function Users() {
 
   const handleDelete = (id: string) => {
     if (confirm('Are you sure you want to delete this user?')) {
-      setUsers(prev => prev.filter(user => user.id !== id))
+      // TODO: Implement delete user Redux action
+      console.log('Delete user:', id)
     }
   }
 
-  const toggleStatus = (id: string) => {
-    setUsers(prev => prev.map(user => 
-      user.id === id 
-        ? { ...user, status: user.status === 'active' ? 'inactive' : 'active' }
-        : user
-    ))
+  const toggleStatus = async (id: string) => {
   }
 
   const openModal = () => {
@@ -147,46 +136,15 @@ export default function Users() {
   const columns = [
     { key: 'name', label: 'Name' },
     { key: 'email', label: 'Email' },
-    { 
-      key: 'role', 
-      label: 'Role',
-      render: (value: string) => (
-        <span className={`${styles.roleTag} ${styles[value]}`}>
-          {value}
-        </span>
-      )
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (value: string, row: User) => (
-        <button
-          onClick={() => toggleStatus(row.id)}
-          className={`${styles.statusButton} ${styles[value]}`}
-        >
-          {value}
-        </button>
-      )
-    },
-    { key: 'createdAt', label: 'Created At' },
-    {
-      key: 'actions',
-      label: 'Actions',
-      render: (_: unknown, row: User) => (
-        <div className={styles.actions}>
-          <button onClick={() => handleEdit(row)} className={styles.editButton}>
-            Edit
-          </button>
-          <button onClick={() => handleDelete(row.id)} className={styles.deleteButton}>
-            Delete
-          </button>
-        </div>
-      )
-    }
   ]
 
+  // Debug: log user data
+  useEffect(() => {
+    console.log('Users page - Redux state:', { users, listUsers, loading, error })
+  }, [users, listUsers, loading, error])
+
   return (
-    <ProtectedRoute allowedRoles={['admin']}>
+    <ProtectedRoute allowedRoles={['super_admin']}>
       <div className={styles.container}>
         <div className={styles.header}>
           <h1>Users Management</h1>
@@ -195,11 +153,24 @@ export default function Users() {
           </Button>
         </div>
 
+        {error && (
+          <div className={styles.error} style={{ 
+            background: '#fee', 
+            color: '#c33', 
+            padding: '1rem', 
+            marginBottom: '1rem', 
+            borderRadius: '4px',
+            border: '1px solid #fcc'
+          }}>
+            Error: {error}
+          </div>
+        )}
+
         <Table 
           columns={columns}
-          data={users}
+          data={finalDisplayUsers}
           loading={loading}
-          emptyMessage="No users found."
+          emptyMessage="No users found. Click 'Add New User' to create your first user."
         />
 
         {isModalOpen && (

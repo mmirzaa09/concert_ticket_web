@@ -175,8 +175,8 @@ export const usersAPI = {
   }
 }
 
-// Payments API (Admin only)
-export const paymentsAPI = {
+// Orders API (Admin only)
+export const ordersAPI = {
   getAll: async (params?: { 
     page?: number; 
     limit?: number; 
@@ -195,22 +195,14 @@ export const paymentsAPI = {
   updateStatus: async (id: string, status: 'pending' | 'completed' | 'failed') => {
     const response = await api.patch(`/api/order/${id}/status`, { status })
     return response.data
+  },
+
+  getAllWithDetails: async () => {
+    const response = await api.get('/api/order/list')
+    return response.data
   }
 }
 
-// Orders API (from tbl_orders table)
-export const ordersAPI = {
-  getAll: async (params?: { 
-    page?: number; 
-    limit?: number; 
-    status?: 'pending' | 'paid' | 'cancelled' | 'expired';
-    userId?: string;
-    concertId?: string;
-  }) => {
-    const response = await api.get('/api/order', { params })
-    return response.data
-  },
-}
 
 // Organizers API (Admin only)
 export const organizersAPI = {

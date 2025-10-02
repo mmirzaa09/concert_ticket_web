@@ -14,36 +14,35 @@ export default function Dashboard() {
   const { user } = useAuth();
   const dispatch = useAppDispatch();
   const { concerts, loading, error } = useAppSelector((state) => state.concerts);
-  const { users } = useAppSelector((state) => state.users);
-  const { orders } = useAppSelector((state) => state.orders);
+  const { totalUsers } = useAppSelector((state) => state.users);
+  const { totalOrders, listOrders } = useAppSelector((state) => state.orders);
 
   const isAdmin = user?.role === 'super_admin';
   const isOrganizer = user?.role === 'organizer';
 
-  // Fetch concerts based on user role
   useEffect(() => {
-    if (isAdmin) {
+    if (user.role === 'super_admin') {
       dispatch(fetchConcertsByRole({ userRole: 'super_admin' }));
       dispatch(fetchUsers());
       dispatch(fetchOrders());
     }
 
-    if (isOrganizer && user.id) {
+    if (user.role === 'organizer' && user.id) {
       dispatch(fetchConcertsByRole({ 
         userRole: 'organizer', 
         organizerId: user.id.toString() 
       }));
     }
-  }, [user, dispatch, isAdmin, isOrganizer]);
+  }, [dispatch, user.id, user.role]);
 
   const stats = {
     totalConcerts: concerts.length,
     activeConcerts: concerts.filter(concert => 
       concert.status === 1 || concert.status === 0
     ).length,
-    totalUsers: isAdmin ? users.length : 0, 
-    totalOrders: isAdmin ? orders.length : 0, 
-    totalOrderOrganizer: isOrganizer ? orders.length : 0 
+    totalUsers: isAdmin ? totalUsers : 0,
+    totalOrders: isAdmin ? totalOrders : 0, 
+    totalOrderOrganizer: isOrganizer ? listOrders : 0 
   };
 
   return (
