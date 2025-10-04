@@ -96,38 +96,6 @@ export default function Users() {
     closeModal()
   }
 
-  const handleEdit = (user: User) => {
-    setEditingUser(user)
-    setFormData({
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      status: user.status
-    })
-    setIsModalOpen(true)
-  }
-
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this user?')) {
-      // TODO: Implement delete user Redux action
-      console.log('Delete user:', id)
-    }
-  }
-
-  const toggleStatus = async (id: string) => {
-  }
-
-  const openModal = () => {
-    setEditingUser(null)
-    setFormData({
-      name: '',
-      email: '',
-      role: 'organizer',
-      status: 'active'
-    })
-    setIsModalOpen(true)
-  }
-
   const closeModal = () => {
     setIsModalOpen(false)
     setEditingUser(null)
@@ -146,12 +114,6 @@ export default function Users() {
   return (
     <ProtectedRoute allowedRoles={['super_admin']}>
       <div className={styles.container}>
-        <div className={styles.header}>
-          <h1>Users Management</h1>
-          <Button onClick={openModal} variant="primary">
-            Add New User
-          </Button>
-        </div>
 
         {error && (
           <div className={styles.error} style={{ 
