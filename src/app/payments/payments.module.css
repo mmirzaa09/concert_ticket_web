@@ -101,6 +101,11 @@
   color: #dc2626;
 }
 
+.statusTag.waiting_approve {
+  background-color: #e0e7ff;
+  color: #3730a3;
+}
+
 .statusActions {
   display: flex;
   gap: 0.25rem;

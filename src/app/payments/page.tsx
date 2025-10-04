@@ -3,48 +3,47 @@
 import { useState, useEffect } from 'react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Table from '../../components/Table'
-import { ordersAPI } from '../../services/api'
 import styles from './payments.module.css'
+import { fetchOrderListDetails } from "../../store/slices/orderSlice";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
 
 interface Payment {
   id: string
   customerName: string
   customerEmail: string
   concertTitle: string
-  amount: number | string  // Handle both number and string types
-  status: 'pending' | 'paid' | 'cancelled'
+  amount: number | string 
+  status: 'pending' | 'paid' | 'cancelled' | 'waiting_approve'
   paymentMethod: string
   bookingDate: string
 }
-
 export default function Payments() {
-  const [payments, setPayments] = useState<Payment[]>([])
-  const [loading, setLoading] = useState(false)
+  const [payments, setPayments] = useState<Payment[]>()
   const [filter, setFilter] = useState('all')
+  const dispatch = useAppDispatch();
+  const { listOrders, totalOrder, loading, error } = useAppSelector(state => state.orders);
 
   useEffect(() => {
-    const loadPayments = async () => {
-      setLoading(true)
-      try {
-        const response = await ordersAPI.getAllWithDetails()
-        setLoading(false)
-        setPayments(response.data || [])
-      } catch (error) {
-        console.error('Failed to load payments:', error)
-        setPayments(mockPayments)
-      }
+    dispatch(fetchOrderListDetails())
+  }, [dispatch])
+
+  useEffect(() => {
+    if (listOrders && listOrders.length > 0) {
+      return setPayments(listOrders)
     }
 
-    loadPayments()
-  }, [])
+    return;
+  }, [listOrders])
 
   const filteredPayments = filter === 'all' 
     ? payments 
     : payments.filter(payment => payment.status === filter)
 
   const getStatusStats = () => {
-    // Debug: check payment data types
-    console.log('First payment amount:', payments[0]?.amount, 'Type:', typeof payments[0]?.amount)
+    
+    if (!Array.isArray(payments) || totalOrder === 0) {
+      return { pending: 0, paid: 0, cancelled: 0, waiting_approve: 0, totalAmount: 0 }
+    }
     
     const stats = payments.reduce((acc, payment) => {
       acc[payment.status] = (acc[payment.status] || 0) + 1
@@ -52,14 +51,13 @@ export default function Payments() {
     }, {} as Record<string, number>)
 
     const totalAmount = payments
-      .filter(p => p.status === 'paid')
+      .filter(p => p.status === 'paid') // Only count paid orders for revenue
+      // Note: If you want to include 'waiting_approve' in potential revenue:
+      // .filter(p => p.status === 'paid' || p.status === 'waiting_approve')
       .reduce((sum, p) => {
         const amount = typeof p.amount === 'string' ? parseFloat(p.amount) : p.amount
-        console.log('Processing amount:', p.amount, 'Type:', typeof p.amount, 'Converted:', amount, 'Running sum:', sum)
         return sum + (amount || 0)
       }, 0)
-
-      console.log('Payment stats:', stats, 'Total Amount:', totalAmount)
 
     return { ...stats, totalAmount }
   }
@@ -84,7 +82,7 @@ export default function Payments() {
       render: (value: string) => (
         <div className={styles.statusColumn}>
           <span className={`${styles.statusTag} ${styles[value]}`}>
-            {value}
+            {value === 'waiting_approve' ? 'Waiting Approve' : value}
           </span>
         </div>
       )
@@ -100,6 +98,19 @@ export default function Payments() {
           <h1>Order Management</h1>
         </div>
 
+        {error && (
+          <div style={{ 
+            background: '#fee', 
+            color: '#c33', 
+            padding: '1rem', 
+            marginBottom: '1rem', 
+            borderRadius: '4px',
+            border: '1px solid #fcc'
+          }}>
+            Error: {error}
+          </div>
+        )}
+
         <div className={styles.stats}>
           <div className={styles.statCard}>
             <h3>Total Revenue</h3>
@@ -114,6 +125,10 @@ export default function Payments() {
             <p className={styles.statValue}>{stats.pending || 0}</p>
           </div>
           <div className={styles.statCard}>
+            <h3>Waiting Approve</h3>
+            <p className={styles.statValue}>{stats.waiting_approve || 0}</p>
+          </div>
+          <div className={styles.statCard}>
             <h3>Cancelled</h3>
             <p className={styles.statValue}>{stats.cancelled || 0}</p>
           </div>
@@ -124,13 +139,19 @@ export default function Payments() {
             onClick={() => setFilter('all')}
             className={`${styles.filterButton} ${filter === 'all' ? styles.active : ''}`}
           >
-            All ({payments.length})
+            All ({totalOrder})
           </button>
           <button
             onClick={() => setFilter('pending')}
             className={`${styles.filterButton} ${filter === 'pending' ? styles.active : ''}`}
           >
             Pending ({stats.pending || 0})
+          </button>
+          <button
+            onClick={() => setFilter('waiting_approve')}
+            className={`${styles.filterButton} ${filter === 'waiting_approve' ? styles.active : ''}`}
+          >
+            Waiting Approve ({stats.waiting_approve || 0})
           </button>
           <button
             onClick={() => setFilter('paid')}
@@ -146,12 +167,15 @@ export default function Payments() {
           </button>
         </div>
 
-        <Table 
-          columns={columns}
-          data={filteredPayments}
-          loading={loading}
-          emptyMessage="No payments found."
-        />
+        {filteredPayments && 
+        (
+          <Table 
+            columns={columns}
+            data={filteredPayments}
+            loading={loading}
+            emptyMessage="No payments found."
+          />
+        )}
       </div>
     </ProtectedRoute>
   )

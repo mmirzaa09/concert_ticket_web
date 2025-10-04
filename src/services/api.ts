@@ -177,13 +177,8 @@ export const usersAPI = {
 
 // Orders API (Admin only)
 export const ordersAPI = {
-  getAll: async (params?: { 
-    page?: number; 
-    limit?: number; 
-    status?: 'pending' | 'completed' | 'failed';
-    search?: string;
-  }) => {
-    const response = await api.get('/api/order', { params })
+  getAll: async () => {
+    const response = await api.get('/api/order')
     return response.data
   },
 

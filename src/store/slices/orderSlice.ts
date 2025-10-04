@@ -71,14 +71,14 @@ export const fetchOrderById = createAsyncThunk(
   }
 );
 
-export const fetchOrdersByIdOrganizer = createAsyncThunk(
-  'orders/fetchOrdersByIdOrganizer',
-  async (organizerId: string, { rejectWithValue }) => {
+export const fetchOrderListDetails = createAsyncThunk(
+  'orders/fetchOrderListDetails',
+  async (_, { rejectWithValue }) => {
     try {
-      const data = await ordersAPI.getByConcertId(organizerId);
+      const data = await ordersAPI.getAllWithDetails();
       return data;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch orders for organizer';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch order details';
       return rejectWithValue(errorMessage);
     }
   }
@@ -144,6 +144,22 @@ const orderSlice = createSlice({
         state.currentOrder = action.payload;
       })
       .addCase(fetchOrderById.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      });
+
+    // Fetch order list with details
+    builder
+      .addCase(fetchOrderListDetails.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchOrderListDetails.fulfilled, (state, action) => {
+        state.loading = false;
+        state.listOrders = action.payload.data.listOrder;
+        state.totalOrders = action.payload.data.totalOrder;
+      })
+      .addCase(fetchOrderListDetails.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });
