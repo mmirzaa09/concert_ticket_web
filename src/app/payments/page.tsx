@@ -51,9 +51,7 @@ export default function Payments() {
     }, {} as Record<string, number>)
 
     const totalAmount = payments
-      .filter(p => p.status === 'paid') // Only count paid orders for revenue
-      // Note: If you want to include 'waiting_approve' in potential revenue:
-      // .filter(p => p.status === 'paid' || p.status === 'waiting_approve')
+      .filter(p => p.status === 'paid') 
       .reduce((sum, p) => {
         const amount = typeof p.amount === 'string' ? parseFloat(p.amount) : p.amount
         return sum + (amount || 0)
@@ -65,6 +63,13 @@ export default function Payments() {
   const stats = getStatusStats()
 
   const columns = [
+    { 
+      key: 'id', 
+      label: 'Transaction ID',
+      render: (value: string) => (
+        <span className={styles.transactionId}>#{value}</span>
+      )
+    },
     { key: 'customerName', label: 'Customer' },
     { key: 'customerEmail', label: 'Email' },
     { key: 'concertTitle', label: 'Concert' },

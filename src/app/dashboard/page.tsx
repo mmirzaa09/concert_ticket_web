@@ -93,7 +93,7 @@ export default function Dashboard() {
               <div className={styles.statCard}>
                 <h3>List Payments</h3>
                 <p className={styles.statNumber}>{stats.totalOrders}</p>
-                <Link href="/payments" className={styles.statLink}>
+                <Link href="/transactions" className={styles.statLink}>
                   Manage payments →
                 </Link>
               </div>

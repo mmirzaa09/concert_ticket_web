@@ -187,13 +187,21 @@ export const ordersAPI = {
     return response.data
   },
 
-  updateStatus: async (id: string, status: 'pending' | 'completed' | 'failed') => {
-    const response = await api.patch(`/api/order/${id}/status`, { status })
-    return response.data
-  },
-
   getAllWithDetails: async () => {
     const response = await api.get('/api/order/list')
+    return response.data
+  }
+}
+
+// Transactions API (Admin only)
+export const transactionsAPI = {
+  getAll: async () => {
+    const response = await api.get('/api/transaction')
+    return response.data
+  },
+  updateStatus: async (payload: { transaction_id: string; transaction_status: 'approved' | 'rejected' }) => {
+    console.log('Updating transaction status:', payload)
+    const response = await api.post(`/api/transaction/confirm`, payload)
     return response.data
   }
 }
