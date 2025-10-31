@@ -18,7 +18,7 @@ interface Payment {
   bookingDate: string
 }
 export default function Payments() {
-  const [payments, setPayments] = useState<Payment[]>()
+  const [payments, setPayments] = useState<Payment[]>([])
   const [filter, setFilter] = useState('all')
   const dispatch = useAppDispatch();
   const { listOrders, totalOrder, loading, error } = useAppSelector(state => state.orders);
@@ -28,11 +28,9 @@ export default function Payments() {
   }, [dispatch])
 
   useEffect(() => {
-    if (listOrders && listOrders.length > 0) {
-      return setPayments(listOrders)
+    if (listOrders) {
+      setPayments(listOrders)
     }
-
-    return;
   }, [listOrders])
 
   const filteredPayments = filter === 'all' 
@@ -103,19 +101,6 @@ export default function Payments() {
           <h1>Order Management</h1>
         </div>
 
-        {error && (
-          <div style={{ 
-            background: '#fee', 
-            color: '#c33', 
-            padding: '1rem', 
-            marginBottom: '1rem', 
-            borderRadius: '4px',
-            border: '1px solid #fcc'
-          }}>
-            Error: {error}
-          </div>
-        )}
-
         <div className={styles.stats}>
           <div className={styles.statCard}>
             <h3>Total Revenue</h3>
@@ -172,14 +157,17 @@ export default function Payments() {
           </button>
         </div>
 
-        {filteredPayments && 
-        (
+        {loading ? (
+          <div className={styles.centeredMessage}>Loading payments...</div>
+        ) : filteredPayments && filteredPayments.length > 0 ? (
           <Table 
             columns={columns}
             data={filteredPayments}
             loading={loading}
             emptyMessage="No payments found."
           />
+        ) : (
+          <div className={styles.centeredMessage}>No payments found for the selected filter.</div>
         )}
       </div>
     </ProtectedRoute>

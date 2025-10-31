@@ -87,7 +87,7 @@ export const concertsAPI = {
 
   // Get specific concert by concert ID
   getById: async (id: string) => {
-    const response = await api.get(`/api/concerts/${id}`)
+    const response = await api.get(`/api/concert/${id}`)
     return response.data
   },
 
@@ -117,17 +117,17 @@ export const concertsAPI = {
     price: number;
     status: 'active' | 'inactive';
   }) => {
-    const response = await api.put(`/api/concerts/${id}`, concertData)
+    const response = await api.put(`/api/concert/${id}`, concertData)
     return response.data
   },
 
   delete: async (id: string) => {
-    const response = await api.delete(`/api/concerts/${id}`)
+    const response = await api.delete(`/api/concert/${id}`)
     return response.data
   },
 
   updateStatus: async (id: string, status: 'active' | 'inactive') => {
-    const response = await api.patch(`/api/concerts/${id}/status`, { status })
+    const response = await api.patch(`/api/concert/status/${id}`, { status })
     return response.data
   }
 }
@@ -249,7 +249,7 @@ export const organizersAPI = {
   },
 
   updateStatus: async (id: string, status: 'active' | 'inactive') => {
-    const response = await api.patch(`/api/organizers/${id}/status`, { status })
+    const response = await api.patch(`/api/organizers/status/${id}`, { status })
     return response.data
   }
 }

@@ -19,6 +19,7 @@ export default function Sidebar() {
     { href: '/users', label: 'Users', roles: ['super_admin'] },
     { href: '/payments', label: 'Orders', roles: ['super_admin'] },
     { href: '/transactions', label: 'Transactions', roles: ['super_admin'] },
+    { href: '/revenue', label: 'Revenue', roles: ['super_admin'] },
   ]
 
   const filteredMenuItems = menuItems.filter(item => 

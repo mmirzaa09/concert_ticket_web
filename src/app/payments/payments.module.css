@@ -148,3 +148,20 @@
 .rejectButton:hover {
   background-color: #dc2626;
 }
+
+.transactionId {
+  font-family: monospace;
+  background-color: #eee;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.centeredMessage {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #6b7280;
+  background-color: #f9fafb;
+  border-radius: 0.5rem;
+  margin-top: 1.5rem;
+}

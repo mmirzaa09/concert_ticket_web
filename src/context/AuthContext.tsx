@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { authAPI } from '../services/api'
+import { useAppDispatch } from '../store/hooks'
 
 export interface User {
   id: string
@@ -45,6 +46,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const dispatch = useAppDispatch()
 
   // Load user data from localStorage on app start
   useEffect(() => {
@@ -98,14 +100,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     website?: string;
   }): Promise<boolean> => {
     try {
-      await authAPI.register(registerData);
-
-      // Registration successful, but don't auto-login
-      // User must login separately after registration
-      return true;
+      await authAPI.register(registerData)
+      return true
     } catch (error) {
-      console.error('Registration error:', error);
-      return false;
+      console.error('Registration error:', error)
+      return false
     }
   }
 
@@ -114,9 +113,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setToken(null)
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+    dispatch({ type: 'user/logout' })
   }
 
-  const value: AuthContextType = {
+  const value = {
     user,
     token,
     login,

@@ -61,6 +61,8 @@ export default function Concerts() {
           userRole: 'organizer', 
           organizerId: user.id.toString() 
         }))
+
+        console.log('all concerts:', concerts)
       }
     }
   }, [user, dispatch, isAdmin, isOrganizer])
@@ -188,7 +190,8 @@ export default function Concerts() {
   }
 
   const toggleStatus = async (id: string) => {
-    const concert = concerts.find(c => c.id === id)
+    const concert = concerts.find(c => c.id_concert === id)
+    console.log('Toggling status for concert:', concert)
     if (!concert) return
 
     const newStatus = concert.status === 1 ? 0 : 1
@@ -242,7 +245,6 @@ export default function Concerts() {
       key: 'image_url',
       label: 'Image',
       render: (value: string) => {
-        // Construct full image URL from environment variable + image filename
         const baseImageUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '');
         const fullImageUrl = value ? `${baseImageUrl}/uploads/${value}` : null;
         
@@ -303,14 +305,18 @@ export default function Concerts() {
       label: 'Status',
       render: (value: number, row: Concert) => (
         <button
-          onClick={() => toggleStatus(row.id)}
+          onClick={() => isOrganizer && toggleStatus(row.id_concert)}
+          disabled={!isOrganizer}
           className={`${styles.statusButton} ${value === 1 ? styles.active : styles.inactive}`}
         >
           {value === 1 ? 'Active' : 'Inactive'}
         </button>
       )
-    },
-    {
+    }
+  ];
+
+  if (isOrganizer) {
+    columns.push({
       key: 'actions',
       label: 'Actions',
       render: (_: unknown, row: Concert) => (
@@ -318,24 +324,24 @@ export default function Concerts() {
           <button onClick={() => handleEdit(row)} className={styles.editButton}>
             Edit
           </button>
-          <button onClick={() => handleDelete(row.id)} className={styles.deleteButton}>
+          <button onClick={() => handleDelete(row.id_concert)} className={styles.deleteButton}>
             Delete
           </button>
         </div>
       )
-    }
-  ]
+    });
+  }
 
   return (
     <ProtectedRoute allowedRoles={['super_admin', 'organizer']}>
       <div className={styles.container}>
         <div className={styles.header}>
           <h1>Concerts Management</h1>
-          <p>{isAdmin ? 'Manage all concerts in the system' : 'Manage your concerts'}</p>
-          {error && <p className={styles.error}>Error: {error}</p>}
-          <Button onClick={openModal} variant="primary">
-            Add New Concert
-          </Button>
+          {isOrganizer && (
+            <Button onClick={openModal} variant="primary">
+              Add New Concert
+            </Button>
+          )}
         </div>
 
         <Table 

@@ -21,19 +21,21 @@ export default function Dashboard() {
   const isOrganizer = user?.role === 'organizer';
 
   useEffect(() => {
-    if (user.role === 'super_admin') {
-      dispatch(fetchConcertsByRole({ userRole: 'super_admin' }));
-      dispatch(fetchUsers());
-      dispatch(fetchOrders());
-    }
+    if (user) {
+      if (user.role === 'super_admin') {
+        dispatch(fetchConcertsByRole({ userRole: 'super_admin' }));
+        dispatch(fetchUsers());
+        dispatch(fetchOrders());
+      }
 
-    if (user.role === 'organizer' && user.id) {
-      dispatch(fetchConcertsByRole({ 
-        userRole: 'organizer', 
-        organizerId: user.id.toString() 
-      }));
+      if (user.role === 'organizer' && user.id) {
+        dispatch(fetchConcertsByRole({ 
+          userRole: 'organizer', 
+          organizerId: user.id.toString() 
+        }));
+      }
     }
-  }, [dispatch, user.id, user.role]);
+  }, [dispatch, user]);
 
   const stats = {
     totalConcerts: concerts.length,
