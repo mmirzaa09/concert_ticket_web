@@ -211,6 +211,11 @@ export const organizersAPI = {
     return response.data
   },
 
+  getAllOrganizers: async () => {
+    const response = await api.get('/api/organizer/organizers')
+    return response.data
+  },
+
   getById: async (id: string) => {
     const response = await api.get(`/api/organizers/${id}`)
     return response.data
@@ -245,8 +250,8 @@ export const organizersAPI = {
     return response.data
   },
 
-  updateStatus: async (id: string, status: 'active' | 'inactive') => {
-    const response = await api.patch(`/api/organizers/status/${id}`, { status })
+  updateStatus: async (id: string, status: '1' | '0') => {
+    const response = await api.patch(`/api/organizer/status/${id}`, { status })
     return response.data
   }
 }

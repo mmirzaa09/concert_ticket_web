@@ -1,17 +1,22 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { organizersAPI } from '../../services/api';
 
 // Types
 export interface Organizer {
   id: string;
+  id_organizer?: string;
   name: string;
   email: string;
-  phone: string;
+  phone_number?: string;
+  phone?: string;
   address: string;
   description?: string;
   website?: string;
-  status: 'active' | 'inactive' | 'pending';
-  createdAt: string;
-  updatedAt: string;
+  status: string;
+  created_at?: string;
+  createdAt?: string;
+  updated_at?: string;
+  updatedAt?: string;
 }
 
 export interface OrganizerState {
@@ -21,6 +26,7 @@ export interface OrganizerState {
   error: string | null;
   totalPages: number;
   currentPage: number;
+  totalOrganizers: number;
 }
 
 // Async thunks
@@ -28,24 +34,24 @@ export const fetchOrganizers = createAsyncThunk(
   'organizers/fetchOrganizers',
   async (params: { page?: number; limit?: number; search?: string; status?: string } = {}, { rejectWithValue }) => {
     try {
-      const queryParams = new URLSearchParams({
-        page: (params.page || 1).toString(),
-        limit: (params.limit || 10).toString(),
-        ...(params.search && { search: params.search }),
-        ...(params.status && { status: params.status }),
-      });
-
-      const response = await fetch(`/api/organizers?${queryParams}`);
-      
-      if (!response.ok) {
-        const error = await response.json();
-        return rejectWithValue(error.message || 'Failed to fetch organizers');
-      }
-
-      const data = await response.json();
+      const data = await organizersAPI.getAll(params);
       return data;
-    } catch {
-      return rejectWithValue('Network error occurred');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch organizers';
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
+export const fetchAllOrganizers = createAsyncThunk(
+  'organizers/fetchAllOrganizers',
+  async (_, { rejectWithValue }) => {
+    try {
+      const data = await organizersAPI.getAllOrganizers();
+      return data;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch organizers';
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -54,44 +60,32 @@ export const fetchOrganizerById = createAsyncThunk(
   'organizers/fetchOrganizerById',
   async (organizerId: string, { rejectWithValue }) => {
     try {
-      const response = await fetch(`/api/organizers/${organizerId}`);
-      
-      if (!response.ok) {
-        const error = await response.json();
-        return rejectWithValue(error.message || 'Failed to fetch organizer');
-      }
-
-      const data = await response.json();
+      const data = await organizersAPI.getById(organizerId);
       return data;
-    } catch {
-      return rejectWithValue('Network error occurred');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch organizer';
+      return rejectWithValue(errorMessage);
     }
   }
 );
 
 export const createOrganizer = createAsyncThunk(
   'organizers/createOrganizer',
-  async (organizerData: Omit<Organizer, 'id' | 'createdAt' | 'updatedAt'>, { rejectWithValue }) => {
+  async (organizerData: {
+    name: string;
+    email: string;
+    phone: string;
+    address: string;
+    description?: string;
+    website?: string;
+    status: string;
+  }, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch('/api/organizers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(organizerData),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        return rejectWithValue(error.message || 'Failed to create organizer');
-      }
-
-      const data = await response.json();
+      const data = await organizersAPI.create(organizerData);
       return data;
-    } catch {
-      return rejectWithValue('Network error occurred');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create organizer';
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -100,52 +94,31 @@ export const updateOrganizer = createAsyncThunk(
   'organizers/updateOrganizer',
   async ({ id, updates }: { id: string; updates: Partial<Organizer> }, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`/api/organizers/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(updates),
+      const data = await organizersAPI.update(id, updates as {
+        name: string;
+        email: string;
+        phone: string;
+        address: string;
+        description?: string;
+        website?: string;
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        return rejectWithValue(error.message || 'Failed to update organizer');
-      }
-
-      const data = await response.json();
       return data;
-    } catch {
-      return rejectWithValue('Network error occurred');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update organizer';
+      return rejectWithValue(errorMessage);
     }
   }
 );
 
 export const updateOrganizerStatus = createAsyncThunk(
   'organizers/updateOrganizerStatus',
-  async ({ id, status }: { id: string; status: 'active' | 'inactive' | 'pending' }, { rejectWithValue }) => {
+  async ({ id, status }: { id: string; status: '1' | '0' }, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`/api/organizers/${id}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        return rejectWithValue(error.message || 'Failed to update organizer status');
-      }
-
-      const data = await response.json();
-      return data;
-    } catch {
-      return rejectWithValue('Network error occurred');
+      const data = await organizersAPI.updateStatus(id, status);
+      return { ...data, id, status };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update organizer status';
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -154,22 +127,11 @@ export const deleteOrganizer = createAsyncThunk(
   'organizers/deleteOrganizer',
   async (organizerId: string, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`/api/organizers/${organizerId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        return rejectWithValue(error.message || 'Failed to delete organizer');
-      }
-
+      await organizersAPI.delete(organizerId);
       return organizerId;
-    } catch {
-      return rejectWithValue('Network error occurred');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete organizer';
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -182,6 +144,7 @@ const initialState: OrganizerState = {
   error: null,
   totalPages: 1,
   currentPage: 1,
+  totalOrganizers: 0,
 };
 
 // Slice
@@ -234,6 +197,21 @@ const organizerSlice = createSlice({
         state.error = action.payload as string;
       });
 
+    // Fetch all organizers (role organizer)
+    builder
+      .addCase(fetchAllOrganizers.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchAllOrganizers.fulfilled, (state, action) => {
+        state.loading = false;
+        state.organizers = action.payload.data || action.payload;
+      })
+      .addCase(fetchAllOrganizers.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      });
+
     // Create organizer
     builder
       .addCase(createOrganizer.pending, (state) => {
@@ -278,12 +256,14 @@ const organizerSlice = createSlice({
       })
       .addCase(updateOrganizerStatus.fulfilled, (state, action) => {
         state.loading = false;
-        const index = state.organizers.findIndex(organizer => organizer.id === action.payload.id);
+        const index = state.organizers.findIndex(
+          organizer => organizer.id_organizer === action.payload.id || organizer.id === action.payload.id
+        );
         if (index !== -1) {
-          state.organizers[index] = action.payload;
-        }
-        if (state.currentOrganizer?.id === action.payload.id) {
-          state.currentOrganizer = action.payload;
+          state.organizers[index] = {
+            ...state.organizers[index],
+            status: action.payload.status,
+          };
         }
       })
       .addCase(updateOrganizerStatus.rejected, (state, action) => {

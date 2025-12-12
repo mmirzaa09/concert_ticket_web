@@ -17,6 +17,7 @@ export default function Sidebar() {
     { href: '/dashboard', label: 'Dashboard', roles: ['super_admin', 'organizer'] },
     { href: '/concerts', label: 'Concerts', roles: ['super_admin', 'organizer'] },
     { href: '/users', label: 'Users', roles: ['super_admin'] },
+    { href: '/organizer', label: 'Organizers', roles: ['super_admin'] },
     { href: '/payments', label: 'Orders', roles: ['super_admin', 'organizer'] },
     { href: '/transactions', label: 'Transactions', roles: ['super_admin'] },
     { href: '/revenue', label: 'Revenue', roles: ['super_admin'] },

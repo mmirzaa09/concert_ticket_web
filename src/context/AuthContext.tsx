@@ -71,6 +71,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const data = await authAPI.login(email, password);
 
+      // Check if organizer status is inactive (status = '0')
+      if (data.data.status === '0') {
+        throw new Error('Your account has been deactivated. Please contact administrator.');
+      }
+
       const userData: User = {
         id: data.data.id_organizer,
         email: data.data.email,
@@ -86,7 +91,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return true;
     } catch (error) {
       console.error('Login error:', error);
-      return false;
+      throw error;
     }
   }
 
