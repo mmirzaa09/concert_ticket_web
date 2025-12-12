@@ -54,7 +54,6 @@ export default function Dashboard() {
           <h1>Dashboard</h1>
           <p>Welcome back, {user?.name}!</p>
           {loading && <p>Loading concerts...</p>}
-          {error && <p className={styles.error}>Error: {error}</p>}
         </div>
 
         <div className={styles.statsGrid}>

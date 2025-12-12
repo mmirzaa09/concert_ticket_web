@@ -91,7 +91,7 @@
   color: #d97706;
 }
 
-.statusTag.paid {
+.statusTag.completed {
   background-color: #d1fae5;
   color: #059669;
 }
@@ -101,7 +101,7 @@
   color: #dc2626;
 }
 
-.statusTag.waiting_approve {
+.statusTag.waiting_confirmation {
   background-color: #e0e7ff;
   color: #3730a3;
 }

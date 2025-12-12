@@ -198,12 +198,12 @@
   color: #d97706;
 }
 
-.statusTag.waiting_approve {
+.statusTag.waiting_confirmation {
   background-color: #dbeafe;
   color: #1d4ed8;
 }
 
-.statusTag.approved {
+.statusTag.completed {
   background-color: #d1fae5;
   color: #059669;
 }

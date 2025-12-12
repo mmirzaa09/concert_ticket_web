@@ -81,14 +81,7 @@ export const fetchConcertById = createAsyncThunk(
 
 export const createConcert = createAsyncThunk(
   'concerts/createConcert',
-  async (concertData: FormData | {
-    title: string;
-    description: string;
-    date: string;
-    venue: string;
-    price: number;
-    status: 'active' | 'inactive';
-  }, { rejectWithValue }) => {
+  async (concertData: FormData, { rejectWithValue }) => {
     try {
       const data = await concertsAPI.create(concertData);
       return data;
@@ -103,14 +96,7 @@ export const updateConcert = createAsyncThunk(
   'concerts/updateConcert',
   async ({ id, updates }: { 
     id: string; 
-    updates: {
-      title: string;
-      description: string;
-      date: string;
-      venue: string;
-      price: number;
-      status: 'active' | 'inactive';
-    }
+    updates: Partial<Concert>
   }, { rejectWithValue }) => {
     try {
       const data = await concertsAPI.update(id, updates);

@@ -7,7 +7,7 @@ import Table from '../../components/Table'
 import { Form, FormField, Input, Textarea, Select, Button } from '../../components/Form'
 import { useAuth } from '../../context/AuthContext'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
-import { fetchConcertsByRole, createConcert } from '../../store/slices/concertSlice'
+import { fetchConcertsByRole, createConcert, deleteConcert, updateConcert } from '../../store/slices/concertSlice'
 import { concertsAPI } from '../../services/api'
 import styles from './concerts.module.css'
 
@@ -53,7 +53,6 @@ export default function Concerts() {
   useEffect(() => {
     if (user) {
       if (isAdmin) {
-        console.log('Fetching all concerts for super_admin')
         dispatch(fetchConcertsByRole({ userRole: 'super_admin' }))
       } else if (isOrganizer && user.id) {
         console.log('Fetching concerts for organizer ID:', user.id)
@@ -61,8 +60,6 @@ export default function Concerts() {
           userRole: 'organizer', 
           organizerId: user.id.toString() 
         }))
-
-        console.log('all concerts:', concerts)
       }
     }
   }, [user, dispatch, isAdmin, isOrganizer])
@@ -79,7 +76,6 @@ export default function Concerts() {
     const file = e.target.files?.[0]
     if (file) {
       setSelectedImage(file)
-      // Create preview URL
       const previewUrl = URL.createObjectURL(file)
       setImagePreview(previewUrl)
     }
@@ -91,17 +87,21 @@ export default function Concerts() {
     
     try {
       if (editingConcert) {
-        // Update existing concert (simplified for now)
         const concertData = {
           title: formData.title,
           artist: formData.artist,
           description: formData.description,
-          date: formData.date,
           venue: formData.venue,
           price: Number(formData.price),
+          total_tickets: Number(formData.total_tickets),
           status: Number(formData.status),
+        };
+        
+        const result = await dispatch(updateConcert({ id: editingConcert.id, updates: concertData }))
+
+        if (updateConcert.rejected.match(result)) {
+          throw new Error(result.payload as string || 'Failed to update concert')
         }
-        await concertsAPI.update(editingConcert.id, concertData)
       } else {
         // Create new concert with file upload
         if (!selectedImage) {
@@ -109,6 +109,8 @@ export default function Concerts() {
           setFormLoading(false)
           return
         }
+
+        console.log('Creating concert with image:', selectedImage)
 
         // Create FormData for file upload
         const formDataToSend = new FormData()
@@ -130,17 +132,14 @@ export default function Concerts() {
         }
       }
 
-      // Refresh the concerts list for update operations
-      // (Create operations are automatically handled by Redux slice)
-      if (editingConcert) {
-        if (isAdmin) {
-          dispatch(fetchConcertsByRole({ userRole: 'super_admin' }))
-        } else if (isOrganizer && user?.id) {
-          dispatch(fetchConcertsByRole({ 
-            userRole: 'organizer', 
-            organizerId: user.id.toString() 
-          }))
-        }
+      // No need to manually refresh, Redux state should update automatically
+      if (isAdmin) {
+        dispatch(fetchConcertsByRole({ userRole: 'super_admin' }))
+      } else if (isOrganizer && user?.id) {
+        dispatch(fetchConcertsByRole({ 
+          userRole: 'organizer', 
+          organizerId: user.id.toString() 
+        }))
       }
 
       closeModal()
@@ -172,19 +171,13 @@ export default function Concerts() {
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this concert?')) {
       try {
-        await concertsAPI.delete(id)
-        
-        // Refresh the concerts list based on user role
-        if (isAdmin) {
-          dispatch(fetchConcertsByRole({ userRole: 'super_admin' }))
-        } else if (isOrganizer && user?.id) {
-          dispatch(fetchConcertsByRole({ 
-            userRole: 'organizer', 
-            organizerId: user.id.toString() 
-          }))
-        }
+        await dispatch(deleteConcert(id)).unwrap();
+        // The reducer should handle removing the concert from the state,
+        // so a refetch might not be necessary unless you want to be certain.
+        // If the data doesn't update, we can add the refetch back.
       } catch (error) {
         console.error('Failed to delete concert:', error)
+        alert(`Failed to delete concert: ${error instanceof Error ? error.message : 'Unknown error'}`)
       }
     }
   }
@@ -245,8 +238,9 @@ export default function Concerts() {
       key: 'image_url',
       label: 'Image',
       render: (value: string) => {
-        const baseImageUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '');
-        const fullImageUrl = value ? `${baseImageUrl}/uploads/${value}` : null;
+        const fullImageUrl = value; // The value is already a full URL
+
+        console.log('Rendering image with URL:', fullImageUrl)
         
         return (
           <div style={{ width: '60px', height: '40px', overflow: 'hidden', borderRadius: '4px', position: 'relative' }}>
@@ -315,22 +309,22 @@ export default function Concerts() {
     }
   ];
 
-  if (isOrganizer) {
-    columns.push({
-      key: 'actions',
-      label: 'Actions',
-      render: (_: unknown, row: Concert) => (
-        <div className={styles.actions}>
-          <button onClick={() => handleEdit(row)} className={styles.editButton}>
-            Edit
-          </button>
-          <button onClick={() => handleDelete(row.id_concert)} className={styles.deleteButton}>
-            Delete
-          </button>
-        </div>
-      )
-    });
-  }
+  // if (isOrganizer) {
+  //   columns.push({
+  //     key: 'actions',
+  //     label: 'Actions',
+  //     render: (_: unknown, row: Concert) => (
+  //       <div className={styles.actions}>
+  //         <button onClick={() => handleEdit(row)} className={styles.editButton}>
+  //           Edit
+  //         </button>
+  //         <button onClick={() => handleDelete(row.id_concert)} className={styles.deleteButton}>
+  //           Delete
+  //         </button>
+  //       </div>
+  //     )
+  //   });
+  // }
 
   return (
     <ProtectedRoute allowedRoles={['super_admin', 'organizer']}>
@@ -387,6 +381,7 @@ export default function Concerts() {
                     value={formData.date}
                     onChange={handleInputChange}
                     required
+                    disabled={!!editingConcert}
                   />
                 </FormField>
 

@@ -13,7 +13,7 @@ interface Transaction {
   username: string
   priceOrder: number
   proofImage: string | null
-  status: 'pending' | 'approved' | 'rejected' | 'waiting_approve'
+  status: 'pending' | 'completed' | 'rejected' | 'pending'
   dateUploaded: string | null
   orderId: string
   concertTitle?: string
@@ -31,14 +31,9 @@ export default function Transactions() {
   }, [dispatch])
 
   // Handle approve/reject actions
-  const handleStatusUpdate = async (transactionId: string, newStatus: 'approved' | 'rejected') => {
+  const handleStatusUpdate = async (transactionId: string, newStatus: 'completed' | 'rejected') => {
     await dispatch(updateTransactionStatus({ transactionId, status: newStatus }))
-  }
-
-  const getImageUrl = (imagePath: string | null) => {
-    if (!imagePath) return null
-    const baseImageUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api', '')
-    return `${baseImageUrl}/uploads/${imagePath}`
+    return dispatch(fetchAllTransactions())
   }
 
   // Filter transactions
@@ -55,7 +50,7 @@ export default function Transactions() {
     }, {} as Record<string, number>)
 
     const totalRevenue = transactions
-      .filter(t => t.transaction_status === 'approved')
+      .filter(t => t.transaction_status === 'completed')
       .reduce((sum, t) => {
         const amount = typeof t.total_price === 'string' ? parseFloat(t.total_price) : t.total_price
         return sum + (amount || 0)
@@ -104,7 +99,7 @@ export default function Transactions() {
           {value ? (
             <div className={styles.proofContainer}>
               <Image
-                src={getImageUrl(value)}
+                src={value}
                 alt="Payment proof"
                 className={styles.proofThumbnail}
                 onClick={() => setSelectedImage(value)}
@@ -127,10 +122,10 @@ export default function Transactions() {
           <span className={`${styles.statusTag} ${styles[value]}`}>
             {value.toUpperCase()}
           </span>
-          {value === 'waiting_approve' && (
+          {value === 'pending' && (
             <div className={styles.actionButtons}>
               <button
-                onClick={() => handleStatusUpdate(row.id_transaction, 'approved')}
+                onClick={() => handleStatusUpdate(row.id_transaction, 'completed')}
                 className={styles.approveButton}
                 disabled={loading}
                 title="Approve transaction"
@@ -162,14 +157,14 @@ export default function Transactions() {
   ]
 
   return (
-    <ProtectedRoute allowedRoles={['super_admin']}>
+    <ProtectedRoute allowedRoles={['super_admin', 'organizer']}>
       <div className={styles.container}>
         <div className={styles.header}>
           <h1>Transaction Management</h1>
           <div className={styles.headerInfo}>
             <span>Total Transactions: {transactions.length}</span>
             <span>•</span>
-            <span>Awaiting Approval: {stats.waiting_approve || 0}</span>
+            <span>Awaiting Approval: {stats.pending || 0}</span>
           </div>
         </div>
 
@@ -181,13 +176,13 @@ export default function Transactions() {
             <small>From approved transactions</small>
           </div>
           <div className={styles.statCard}>
-            <h3>Approved</h3>
-            <p className={styles.statValue}>{stats.approved || 0}</p>
-            <small>Successfully approved</small>
+            <h3>Completed</h3>
+            <p className={styles.statValue}>{stats.completed || 0}</p>
+            <small>Successfully completed</small>
           </div>
           <div className={styles.statCard}>
             <h3>Waiting Approval</h3>
-            <p className={styles.statValue}>{stats.waiting_approve || 0}</p>
+            <p className={styles.statValue}>{stats.pending || 0}</p>
             <small>Need admin action</small>
           </div>
           <div className={styles.statCard}>
@@ -206,16 +201,16 @@ export default function Transactions() {
             All ({transactions.length})
           </button>
           <button
-            onClick={() => setFilter('waiting_approve')}
-            className={`${styles.filterButton} ${filter === 'waiting_approve' ? styles.active : ''}`}
+            onClick={() => setFilter('pending')}
+            className={`${styles.filterButton} ${filter === 'pending' ? styles.active : ''}`}
           >
-            Waiting Approval ({stats.waiting_approve || 0})
+            Waiting Approval ({stats.pending || 0})
           </button>
           <button
-            onClick={() => setFilter('approved')}
-            className={`${styles.filterButton} ${filter === 'approved' ? styles.active : ''}`}
+            onClick={() => setFilter('completed')}
+            className={`${styles.filterButton} ${filter === 'completed' ? styles.active : ''}`}
           >
-            Approved ({stats.approved || 0})
+            Completed ({stats.completed || 0})
           </button>
           <button
             onClick={() => setFilter('pending')}
@@ -254,7 +249,7 @@ export default function Transactions() {
               </div>
               <div className={styles.modalBody}>
                 <Image
-                  src={getImageUrl(selectedImage)}
+                  src={selectedImage}
                   alt="Payment proof full size"
                   className={styles.fullSizeImage}
                   width={800}

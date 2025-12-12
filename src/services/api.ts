@@ -87,26 +87,17 @@ export const concertsAPI = {
 
   // Get specific concert by concert ID
   getById: async (id: string) => {
-    const response = await api.get(`/api/concert/${id}`)
+    const response = await api.get(`/api/concert/detail/${id}`)
     return response.data
   },
 
-  create: async (concertData: FormData | {
-    title: string;
-    description: string;
-    date: string;
-    venue: string;
-    price: number;
-    status: 'active' | 'inactive';
-  }) => {
-    const config = concertData instanceof FormData ? {
+  create: async (concertData: FormData) => {
+    const response = await api.post('/api/concert/create', concertData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-    } : {};
-    
-    const response = await api.post('/api/concert/create', concertData, config)
-    return response.data
+    });
+    return response.data;
   },
 
   update: async (id: string, concertData: {
@@ -122,7 +113,8 @@ export const concertsAPI = {
   },
 
   delete: async (id: string) => {
-    const response = await api.delete(`/api/concert/${id}`)
+    console.log('Deleting concert with id:', id)
+    const response = await api.delete(`/api/concert/delete/${id}`)
     return response.data
   },
 
@@ -199,7 +191,7 @@ export const transactionsAPI = {
     const response = await api.get('/api/transaction')
     return response.data
   },
-  updateStatus: async (payload: { transaction_id: string; transaction_status: 'approved' | 'rejected' }) => {
+  updateStatus: async (payload: { transaction_id: string; transaction_status: 'completed' | 'rejected' }) => {
     console.log('Updating transaction status:', payload)
     const response = await api.post(`/api/transaction/confirm`, payload)
     return response.data

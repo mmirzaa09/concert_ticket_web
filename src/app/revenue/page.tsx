@@ -30,7 +30,7 @@ export default function Revenue() {
   ]
 
   const revenueData: RevenueData[] = transactions
-    .filter(t => t.transaction_status === 'approved')
+    .filter(t => t.transaction_status === 'completed')
     .reduce((acc: RevenueData[], t) => {
       const existingConcert = acc.find(item => item.concertName === t.concert_title);
       const price = typeof t.total_price === 'string' ? parseFloat(t.total_price) : t.total_price;

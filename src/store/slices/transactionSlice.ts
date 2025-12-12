@@ -7,7 +7,7 @@ interface Transaction {
   username: string;
   priceOrder: number;
   proofImage: string | null;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'completed' | 'rejected';
   dateUploaded: string | null;
   orderId: string;
   concertTitle?: string;
@@ -44,7 +44,7 @@ export const fetchAllTransactions = createAsyncThunk(
 // Async thunk to update a transaction's status
 export const updateTransactionStatus = createAsyncThunk(
   'transactions/updateStatus',
-  async ({ transactionId, status }: { transactionId: string; status: 'approved' | 'rejected' }, { rejectWithValue }) => {
+  async ({ transactionId, status }: { transactionId: string; status: 'completed' | 'rejected' }, { rejectWithValue }) => {
     try {
       const payload = { id_transaction: transactionId, transaction_status: status };
       const response = await transactionsAPI.updateStatus(payload);

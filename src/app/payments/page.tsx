@@ -13,7 +13,7 @@ interface Payment {
   customerEmail: string
   concertTitle: string
   amount: number | string 
-  status: 'pending' | 'paid' | 'cancelled' | 'waiting_approve'
+  status: 'pending' | 'paid' | 'cancelled' | 'waiting_confirmation' | 'completed'
   paymentMethod: string
   bookingDate: string
 }
@@ -21,7 +21,7 @@ export default function Payments() {
   const [payments, setPayments] = useState<Payment[]>([])
   const [filter, setFilter] = useState('all')
   const dispatch = useAppDispatch();
-  const { listOrders, totalOrder, loading, error } = useAppSelector(state => state.orders);
+  const { listOrders, totalOrder, loading } = useAppSelector(state => state.orders);
 
   useEffect(() => {
     dispatch(fetchOrderListDetails())
@@ -40,7 +40,7 @@ export default function Payments() {
   const getStatusStats = () => {
     
     if (!Array.isArray(payments) || totalOrder === 0) {
-      return { pending: 0, paid: 0, cancelled: 0, waiting_approve: 0, totalAmount: 0 }
+      return { pending: 0, completed: 0, cancelled: 0, waiting_confirmation: 0, totalAmount: 0 }
     }
     
     const stats = payments.reduce((acc, payment) => {
@@ -49,7 +49,7 @@ export default function Payments() {
     }, {} as Record<string, number>)
 
     const totalAmount = payments
-      .filter(p => p.status === 'paid') 
+      .filter(p => p.status === 'completed') 
       .reduce((sum, p) => {
         const amount = typeof p.amount === 'string' ? parseFloat(p.amount) : p.amount
         return sum + (amount || 0)
@@ -85,7 +85,7 @@ export default function Payments() {
       render: (value: string) => (
         <div className={styles.statusColumn}>
           <span className={`${styles.statusTag} ${styles[value]}`}>
-            {value === 'waiting_approve' ? 'Waiting Approve' : value}
+            {value === 'waiting_confirmation' ? 'Waiting Approve' : value}
           </span>
         </div>
       )
@@ -108,7 +108,7 @@ export default function Payments() {
           </div>
           <div className={styles.statCard}>
             <h3>Completed</h3>
-            <p className={styles.statValue}>{stats.paid || 0}</p>
+            <p className={styles.statValue}>{stats.completed || 0}</p>
           </div>
           <div className={styles.statCard}>
             <h3>Pending</h3>
@@ -116,7 +116,7 @@ export default function Payments() {
           </div>
           <div className={styles.statCard}>
             <h3>Waiting Approve</h3>
-            <p className={styles.statValue}>{stats.waiting_approve || 0}</p>
+            <p className={styles.statValue}>{stats.waiting_confirmation || 0}</p>
           </div>
           <div className={styles.statCard}>
             <h3>Cancelled</h3>
@@ -138,16 +138,16 @@ export default function Payments() {
             Pending ({stats.pending || 0})
           </button>
           <button
-            onClick={() => setFilter('waiting_approve')}
-            className={`${styles.filterButton} ${filter === 'waiting_approve' ? styles.active : ''}`}
+            onClick={() => setFilter('waiting_confirmation')}
+            className={`${styles.filterButton} ${filter === 'waiting_confirmation' ? styles.active : ''}`}
           >
-            Waiting Approve ({stats.waiting_approve || 0})
+            Waiting Approve ({stats.waiting_confirmation || 0})
           </button>
           <button
-            onClick={() => setFilter('paid')}
-            className={`${styles.filterButton} ${filter === 'paid' ? styles.active : ''}`}
+            onClick={() => setFilter('completed')}
+            className={`${styles.filterButton} ${filter === 'completed' ? styles.active : ''}`}
           >
-            Completed ({stats.paid || 0})
+            Completed ({stats.completed || 0})
           </button>
           <button
             onClick={() => setFilter('cancelled')}
