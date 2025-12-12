@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import Table from '../../components/Table'
 import styles from './payments.module.css'
-import { fetchOrderListDetails } from "../../store/slices/orderSlice";
+import { fetchOrderListDetails, fetchOrdersByOrganizer } from "../../store/slices/orderSlice";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import { useAuth } from '../../context/AuthContext'
 
 interface Payment {
   id: string
@@ -21,17 +22,30 @@ export default function Payments() {
   const [payments, setPayments] = useState<Payment[]>([])
   const [filter, setFilter] = useState('all')
   const dispatch = useAppDispatch();
-  const { listOrders, totalOrder, loading } = useAppSelector(state => state.orders);
+  const { listOrders, totalOrder, loading, orders } = useAppSelector(state => state.orders);
+  const { user } = useAuth();
 
   useEffect(() => {
-    dispatch(fetchOrderListDetails())
-  }, [dispatch])
-
-  useEffect(() => {
-    if (listOrders) {
-      setPayments(listOrders)
+    if (user) {
+      if (user.role === 'organizer') {
+        dispatch(fetchOrdersByOrganizer(user.id));
+      } else {
+        dispatch(fetchOrderListDetails());
+      }
     }
-  }, [listOrders])
+  }, [dispatch, user]);
+
+  useEffect(() => {
+    if (user?.role === 'organizer') {
+      if (orders) {
+        setPayments(orders);
+      }
+    } else {
+      if (listOrders) {
+        setPayments(listOrders);
+      }
+    }
+  }, [listOrders, orders, user]);
 
   const filteredPayments = filter === 'all' 
     ? payments 
@@ -95,7 +109,7 @@ export default function Payments() {
   ]
 
   return (
-    <ProtectedRoute allowedRoles={['super_admin']}>
+    <ProtectedRoute allowedRoles={['super_admin', 'organizer']}>
       <div className={styles.container}>
         <div className={styles.header}>
           <h1>Order Management</h1>

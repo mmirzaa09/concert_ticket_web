@@ -23,12 +23,13 @@ interface Concert {
   organizerId: string
   image_url?: string
   total_tickets?: number
+  available_tickets?: number
 }
 
 export default function Concerts() {
   const { user } = useAuth()
   const dispatch = useAppDispatch()
-  const { concerts, loading, error } = useAppSelector((state) => state.concerts)
+  const { concerts, loading } = useAppSelector((state) => state.concerts)
   
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingConcert, setEditingConcert] = useState<Concert | null>(null)
@@ -151,40 +152,8 @@ export default function Concerts() {
     }
   }
 
-  const handleEdit = (concert: Concert) => {
-    setEditingConcert(concert)
-    setFormData({
-      title: concert.title,
-      artist: concert.artist || '',
-      description: concert.description,
-      date: concert.date,
-      venue: concert.venue,
-      price: concert.price.toString(),
-      total_tickets: concert.total_tickets?.toString() || '',
-      status: concert.status
-    })
-    setSelectedImage(null)
-    setImagePreview(null)
-    setIsModalOpen(true)
-  }
-
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this concert?')) {
-      try {
-        await dispatch(deleteConcert(id)).unwrap();
-        // The reducer should handle removing the concert from the state,
-        // so a refetch might not be necessary unless you want to be certain.
-        // If the data doesn't update, we can add the refetch back.
-      } catch (error) {
-        console.error('Failed to delete concert:', error)
-        alert(`Failed to delete concert: ${error instanceof Error ? error.message : 'Unknown error'}`)
-      }
-    }
-  }
-
   const toggleStatus = async (id: string) => {
     const concert = concerts.find(c => c.id_concert === id)
-    console.log('Toggling status for concert:', concert)
     if (!concert) return
 
     const newStatus = concert.status === 1 ? 0 : 1
@@ -289,6 +258,11 @@ export default function Concerts() {
         })
       }
     },
+    {
+      key: 'available_tickets',
+      label: 'Ticket',
+      render: (value: number, row: Concert) => `${value ?? 0}/${row.total_tickets ?? 0}`
+    },
     { 
       key: 'price', 
       label: 'Price',
@@ -309,22 +283,7 @@ export default function Concerts() {
     }
   ];
 
-  // if (isOrganizer) {
-  //   columns.push({
-  //     key: 'actions',
-  //     label: 'Actions',
-  //     render: (_: unknown, row: Concert) => (
-  //       <div className={styles.actions}>
-  //         <button onClick={() => handleEdit(row)} className={styles.editButton}>
-  //           Edit
-  //         </button>
-  //         <button onClick={() => handleDelete(row.id_concert)} className={styles.deleteButton}>
-  //           Delete
-  //         </button>
-  //       </div>
-  //     )
-  //   });
-  // }
+        console.log('check item concerts', concerts)
 
   return (
     <ProtectedRoute allowedRoles={['super_admin', 'organizer']}>

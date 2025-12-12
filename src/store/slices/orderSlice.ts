@@ -58,6 +58,19 @@ export const fetchOrders = createAsyncThunk(
   }
 );
 
+export const fetchOrdersByOrganizer = createAsyncThunk(
+  'orders/fetchOrdersByOrganizer',
+  async (organizerId: string, { rejectWithValue }) => {
+    try {
+      const data = await ordersAPI.getByOrganizerId(organizerId);
+      return data;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch orders';
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
 export const fetchOrderById = createAsyncThunk(
   'orders/fetchOrderById',
   async (orderId: string, { rejectWithValue }) => {
@@ -129,6 +142,22 @@ const orderSlice = createSlice({
         state.totalOrders = action.payload.data.totalOrders;
       })
       .addCase(fetchOrders.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      });
+
+    // Fetch orders by organizer
+    builder
+      .addCase(fetchOrdersByOrganizer.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchOrdersByOrganizer.fulfilled, (state, action) => {
+        state.loading = false;
+        state.orders = action.payload.data.orders;
+        state.totalOrders = action.payload.data.totalOrders;
+      })
+      .addCase(fetchOrdersByOrganizer.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });

@@ -182,6 +182,11 @@ export const ordersAPI = {
   getAllWithDetails: async () => {
     const response = await api.get('/api/order/list')
     return response.data
+  },
+
+  getByOrganizerId: async (organizerId: string) => {
+    const response = await api.get(`/api/order/organizer/${organizerId}`)
+    return response.data
   }
 }
 
